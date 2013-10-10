@@ -7,7 +7,8 @@ import java.util.TimeZone;
 
 /**
  * A formatter/parser for dates in the format "yyyy-MM-dd'T'HH:mm:ssZ".
- * Date strings are always returned in UTC (+0000).
+ * Date strings are always returned in UTC (+0000). Wraps SimpleDateFormat,
+ * which is not thread safe, so neither is this.
  * 
  * @author gaprice@lbl.gov
  * 
