@@ -24,6 +24,7 @@ public class UTCDateFormat {
 	 */
 	public UTCDateFormat() {
 		format.setTimeZone(TimeZone.getTimeZone("UTC"));
+		format.setLenient(false);
 	}
 	
 	/**
