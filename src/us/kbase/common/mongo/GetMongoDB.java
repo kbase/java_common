@@ -69,6 +69,10 @@ public class GetMongoDB {
 	 */
 	public static DB getDB(final String host, final String database) throws
 			UnknownHostException, InvalidHostException, IOException {
+		if (database == null || database.isEmpty()) {
+			throw new IllegalArgumentException(
+					"database may not be null or the empty string");
+		}
 		final DB db = getMongoClient(host).getDB(database);
 		try {
 			db.getCollectionNames();
@@ -94,6 +98,10 @@ public class GetMongoDB {
 			final String user, final String pwd) throws
 			UnknownHostException, InvalidHostException, IOException,
 			MongoAuthException {
+		if (database == null || database.isEmpty()) {
+			throw new IllegalArgumentException(
+					"database may not be null or the empty string");
+		}
 		final DB db = getMongoClient(host).getDB(database);
 		try {
 			db.authenticate(user, pwd.toCharArray());
