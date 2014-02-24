@@ -1,48 +1,62 @@
-#standalone variables which are replaced when run via /kb/dev_container/Makefile
-TOP_DIR = ../..
-DEPLOY_RUNTIME ?= /kb/runtime
-TARGET ?= /kb/deployment
+JAR-PREFIX = kbase-common
 
-include $(TOP_DIR)/tools/Makefile.common
+ANT = ant
+
+GITCOMMIT := $(shell git rev-parse --short HEAD)
+EPOCH := $(shell date +%s)
+TAGS := $(shell git tag --contains $(GITCOMMIT))
+TAG := $(shell python internal/checktags.py $(TAGS))
+
+ERR := $(findstring Two valid tags for this commit, $(TAG))
+
+ifneq ($(ERR), )
+$(error Tags are ambiguous for this commit: $(TAG))
+endif 
+
+COMMON-JAR = $(JAR-PREFIX)-$(TAG).jar
+
+ifeq ($(TAG), )
+COMMON-JAR = $(JAR-PREFIX)-$(EPOCH)-$(GITCOMMIT).jar
+endif
 
 # make sure our make test works
 .PHONY : test
 
-default: all
+default: build-libs build-docs
 
-all:
-	@echo "Nothing to be done"
+build-libs:
+	$(ANT) compile -Dcompile.jarfile=$(COMMON-JAR)
 
-# here are the standard KBase test targets (test, deploy-client, deploy-scripts, & deploy-service)
+build-docs: build-libs
+	-rm -r docs 
+	$(ANT) javadoc
 
-test: 
-	@echo "No tests"
+test:
+	$(ANT) test -Dcompile.jarfile=$(COMMON-JAR)
 
 test-client:
-	@echo "No tests"
-
-test-scripts: 
-	@echo "No tests"
-
+	@echo "no client"
+	
 test-service:
-	@echo "No tests"
+	@echo "no service"
 
-include $(TOP_DIR)/tools/Makefile.common.rules
-
-# here are the standard KBase deployment targets (deploy,deploy-client, deploy-scripts, & deploy-service)
-
+test-scripts:
+	@echo "no scripts to test"
+	
 deploy:
-	@echo "Nothing to deploy"
+	@echo "nothing to deploy"
 
-deploy-client: 
-	@echo "No client"
+deploy-client:
+	@echo "nothing to deploy"
+
+deploy-docs:
+	@echo "nothing to deploy"
+
+deploy-scripts:
+	@echo "nothing to deploy"
 
 deploy-service:
-	@echo "No service"
-	
-deploy-scripts:
-	@echo "No scripts"
+	@echo "nothing to deploy"
 
-undeploy:
-	@echo "Nothing to undeploy
-
+clean:
+	$(ANT) clean

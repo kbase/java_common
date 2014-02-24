@@ -1,0 +1,73 @@
+<project name="KBase common Java libs" default="test" basedir=".">
+
+  <description>
+      Build file for the comman KBase Java libs
+  </description>
+
+  <!-- set global properties for this build -->
+  <property name="package" value="KBase common"/>
+  <property name="src" location="src"/>
+  <property name="jardir" location="../jars/lib/jars/"/>
+  <property name="classes" location="classes"/>
+  <property name="docs" location="docs"/>
+
+  <fileset dir="${jardir}" id="lib">
+    <include name="apache_commons/commons-lang3-3.1.jar"/>
+    <include name="junit/junit-4.9.jar"/>
+    <include name="mongo/mongo-java-driver-2.11.2.jar"/>
+  </fileset>
+
+  <fileset id="jdoc-files" dir="${src}" defaultexcludes="yes">
+    <exclude name="**/test/*"/>
+  </fileset>
+
+  <path id="compile.classpath">
+    <fileset refid="lib"/>
+  </path>
+
+  <target name="init" description="make directories">
+    <!-- Create the output directory structure-->
+    <mkdir dir="${classes}"/>
+    <mkdir dir="${docs}"/>
+  </target>
+
+  <target name="compile" depends="init" description="compile the source">
+    <fail unless="compile.jarfile" message="property compile.jarfile not set."/>
+    <!-- Compile class files-->
+    <javac destdir="${classes}" includeantruntime="false" target="1.6" source="1.6"
+      debug="true" classpathref="compile.classpath">
+      <src path="${src}"/>
+    </javac>
+    <!-- Make main jar file-->
+    <jar destfile="${compile.jarfile}" basedir="${classes}"/>
+  </target>
+
+  <target name="javadoc" depends="init" description="build javadocs">
+    <javadoc access="protected" author="false" classpathref="compile.classpath"
+      destdir="${docs}/javadoc" nodeprecated="false" nodeprecatedlist="false"
+      noindex="false" nonavbar="false" notree="false"
+      source="1.7" splitindex="true" use="true" version="true">
+      <link href="http://download.oracle.com/javase/7/docs/api/"/>
+      <fileset refid="jdoc-files"/>
+    </javadoc>
+  </target>
+
+  <target name="test" depends="compile" description="run tests">
+    <fail unless="compile.jarfile" message="property compile.jarfile not set."/>
+    <echo message="starting ${package} tests"/>
+    <junit failureproperty="test.failed">
+      <classpath path="${compile.jarfile}"/>
+      <classpath refid="compile.classpath"/>
+      <formatter type="plain" usefile="false" />
+      <test name="us.kbase.common.test.utils.TestStringUtils"/>
+    </junit>
+    <fail message="Test failure detected, check test results." if="test.failed" />
+  </target>
+
+  <target name="clean" description="clean up" >
+    <!-- Clean up internal temporary files and folders-->
+    <delete dir="${classes}"/>
+    <delete dir="${docs}"/>
+  </target>
+</project>
+
