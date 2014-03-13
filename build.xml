@@ -15,6 +15,11 @@
     <include name="apache_commons/commons-lang3-3.1.jar"/>
     <include name="junit/junit-4.9.jar"/>
     <include name="mongo/mongo-java-driver-2.11.2.jar"/>
+    <include name="jackson/jackson-core-2.2.3.jar"/>
+    <include name="jackson/jackson-databind-2.2.3.jar"/>
+    <include name="jackson/jackson-annotations-2.2.3.jar"/>
+    <include name="derby/derby-10.10.1.1.jar"/>
+    <include name="easymock/easymock-3.2.jar"/>
   </fileset>
 
   <fileset id="jdoc-files" dir="${src}" defaultexcludes="yes">
@@ -60,6 +65,7 @@
       <classpath refid="compile.classpath"/>
       <formatter type="plain" usefile="false" />
       <test name="us.kbase.common.test.utils.TestStringUtils"/>
+      <test name="us.kbase.common.taskqueue.test.TaskQueueTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>
