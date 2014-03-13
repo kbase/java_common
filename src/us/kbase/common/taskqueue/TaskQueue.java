@@ -162,7 +162,7 @@ public class TaskQueue {
 			TaskRunner<Object> runner = (TaskRunner<Object>)runners.get(params.getClass());
 			if (runner == null)
 				throw new IllegalStateException("Task data type is not supported: " + params.getClass().getName());
-			runner.run(token, params, config);
+			runner.run(token, params, task.getJobId(), task.getOutRef());
 			completeTaskState(task, token, null, null);
 		} catch (Throwable e) {
 			try {

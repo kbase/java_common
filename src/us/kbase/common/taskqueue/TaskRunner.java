@@ -12,5 +12,5 @@ public interface TaskRunner <T> {
 	
 	public String getOutRef(T inputData);
 	
-	public void run(String token, T inputData, TaskQueueConfig config) throws Exception;
+	public void run(String token, T inputData, String jobId, String outRef) throws Exception;
 }
