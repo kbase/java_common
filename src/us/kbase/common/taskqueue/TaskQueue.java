@@ -165,6 +165,8 @@ public class TaskQueue {
 			runner.run(token, params, task.getJobId(), task.getOutRef());
 			completeTaskState(task, token, null, null);
 		} catch (Throwable e) {
+			if (needToStop)
+				e = new Exception("Stop event was requested", e);
 			try {
 				StringWriter sw = new StringWriter();
 				PrintWriter pw = new PrintWriter(sw);
