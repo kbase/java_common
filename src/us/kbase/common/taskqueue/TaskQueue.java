@@ -23,7 +23,7 @@ public class TaskQueue {
 	private Map<String, Task> taskMap = new HashMap<String, Task>();
 	private LinkedList<Task> taskQueue = new LinkedList<Task>();
 	private Thread[] allThreads;
-	private boolean needToStop = false;
+	private volatile boolean needToStop = false;
 	private final Object idleMonitor = new Object();
 	private final TaskQueueConfig config;
 	    
@@ -139,6 +139,7 @@ public class TaskQueue {
 			ex.printStackTrace();
 		}
 		taskMap.remove(task.getJobId());
+		System.out.println("Task " + task.getJobId() + " was deleted");
 	}
 	
 	public synchronized Task getTask(String jobId) {
@@ -154,7 +155,7 @@ public class TaskQueue {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void runTask(Task task) {
+	private boolean runTask(Task task) {
 		String token = task.getAuthToken();
 		try {
 			changeTaskStateIntoRunning(task, token);
@@ -165,8 +166,15 @@ public class TaskQueue {
 			runner.run(token, params, task.getJobId(), task.getOutRef());
 			completeTaskState(task, token, null, null);
 		} catch (Throwable e) {
-			if (needToStop)
-				e = new Exception("Stop event was requested", e);
+			if (!needToStop) {
+				try {
+					Thread.sleep(60000);
+				} catch (InterruptedException ignore) {}
+			}
+			if (needToStop) {
+				System.out.println("Task " + task.getJobId() + " was left for next server start");
+				return false;
+			}
 			try {
 				StringWriter sw = new StringWriter();
 				PrintWriter pw = new PrintWriter(sw);
@@ -185,6 +193,7 @@ public class TaskQueue {
 				ex.printStackTrace();
 			}
 		}
+		return true;
 	}
 
 	private String createQueuedTaskJob(String description, String token) throws Exception {
@@ -220,8 +229,8 @@ public class TaskQueue {
 						while (!needToStop) {
 							Task task = gainNewTask();
 							if (task != null) {
-								runTask(task);
-								removeTask(task);
+								if (runTask(task))
+									removeTask(task);
 							} else {
 								long ms = 55 * 1000 + (int)(10 * 1000 * Math.random());
 								synchronized (idleMonitor) {
