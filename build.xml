@@ -49,6 +49,9 @@
       debug="true" classpathref="compile.classpath">
       <src path="${src}"/>
     </javac>
+    <copy todir="${classes}">
+      <fileset dir="${src}"/>
+    </copy>
     <!-- Make main jar file-->
     <jar destfile="${compile.jarfile}" basedir="${classes}"/>
   </target>

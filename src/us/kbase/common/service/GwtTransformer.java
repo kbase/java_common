@@ -11,11 +11,15 @@ import java.util.Map;
 public class GwtTransformer {
 	@SuppressWarnings("unchecked")
 	public static <T> T transform(Object source, Class<T> targetClass) throws Exception {
-		return (T)transform(source, targetClass.getPackage().getName());
+		return (T)transform(source, targetClass.getPackage().getName(), targetClass.getClassLoader());
+	}
+
+	public static Object transform(Object source, String targetPackage) throws Exception {
+		return transform(source, targetPackage, null);
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static Object transform(Object source, String targetPackage) throws Exception {
+	public static Object transform(Object source, String targetPackage, ClassLoader cl) throws Exception {
 		if (source == null) {
 			return source;
 		} else if (source.getClass().getName().startsWith("java.lang.")) {
@@ -34,7 +38,7 @@ public class GwtTransformer {
 			return ret;
 		} else {
 			String retClassName = targetPackage + "." + source.getClass().getSimpleName() + "GWT";
-			Class<?> retClass = Class.forName(retClassName);
+			Class<?> retClass = cl == null ? Class.forName(retClassName) : cl.loadClass(retClassName);
 			Object ret = retClass.newInstance();
 			Map<String, Method> getters = getMethodMap(source.getClass(), "get");
 			Map<String, Method> setters = getMethodMap(retClass, "set");
