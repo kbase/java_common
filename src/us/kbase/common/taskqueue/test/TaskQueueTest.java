@@ -83,7 +83,7 @@ public class TaskQueueTest extends EasyMockSupport {
 		});
 		replayAll();
 		final boolean[] isOk = {false};
-		tq[0] = new TaskQueue(new TaskQueueConfig(1, tmpDir, jbst, null, null)).registerRunner(
+		tq[0] = new TaskQueue(new TaskQueueConfig(1, tmpDir, jbst, null, null),
 				new TestTaskRunner() {
 					@Override
 					public void run(String token, TestTask inputData,
@@ -138,7 +138,7 @@ public class TaskQueueTest extends EasyMockSupport {
 		    }
 		});
 		replayAll();
-		tq[0] = new TaskQueue(new TaskQueueConfig(1, tmpDir, jbst, null, null)).registerRunner(new TestTaskRunner() {
+		tq[0] = new TaskQueue(new TaskQueueConfig(1, tmpDir, jbst, null, null), new TestTaskRunner() {
 			@Override
 			public void run(String token, TestTask inputData, String jobId, String outRef) throws Exception {
 				throw new IllegalStateException(errorMsg);

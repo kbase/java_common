@@ -112,7 +112,7 @@ public class TaskQueue {
 		addTask(task);
 		storeTaskInDb(task);
 		synchronized (idleMonitor) {
-			idleMonitor.notify();
+			idleMonitor.notifyAll();
 		}
 		return jobId;
 	}
