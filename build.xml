@@ -73,6 +73,8 @@
       <test name="us.kbase.common.test.utils.TestStringUtils"/>
       <test name="us.kbase.common.taskqueue.test.TaskQueueTest"/>
       <test name="us.kbase.common.utils.sortjson.test.SortedKeysJsonFileTest"/>
+      <test name="us.kbase.common.test.utils.TestUTF8Utils"/>
+      <test name="us.kbase.common.test.service.TestJsonTokenStream"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>
