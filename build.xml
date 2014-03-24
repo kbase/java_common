@@ -20,6 +20,12 @@
     <include name="jackson/jackson-annotations-2.2.3.jar"/>
     <include name="derby/derby-10.10.1.1.jar"/>
     <include name="easymock/easymock-3.2.jar"/>
+    <include name="ini4j/ini4j-0.5.2.jar"/>
+    <include name="jetty/jetty-all-7.0.0.jar"/>
+    <include name="jna/jna-3.4.0.jar"/>
+    <include name="servlet/servlet-api-2.5.jar"/>
+    <include name="syslog4j/syslog4j-0.9.46.jar"/>
+    <include name="kbase/auth/kbase-auth-1391624254-0080b5c.jar"/>
   </fileset>
 
   <fileset id="jdoc-files" dir="${src}" defaultexcludes="yes">
@@ -51,7 +57,7 @@
     <javadoc access="protected" author="false" classpathref="compile.classpath"
       destdir="${docs}/javadoc" nodeprecated="false" nodeprecatedlist="false"
       noindex="false" nonavbar="false" notree="false"
-      source="1.7" splitindex="true" use="true" version="true">
+      source="1.7" splitindex="true" use="true" version="true" sourcepath="${src}">
       <link href="http://download.oracle.com/javase/7/docs/api/"/>
       <fileset refid="jdoc-files"/>
     </javadoc>
@@ -66,6 +72,7 @@
       <formatter type="plain" usefile="false" />
       <test name="us.kbase.common.test.utils.TestStringUtils"/>
       <test name="us.kbase.common.taskqueue.test.TaskQueueTest"/>
+      <test name="us.kbase.common.utils.sortjson.test.SortedKeysJsonFileTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>
