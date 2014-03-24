@@ -27,13 +27,13 @@ public class GwtTransformer {
 		} else if (source instanceof List) {
 			List<Object> ret = new ArrayList<Object>();
 			for (Object obj : ((List<Object>)source)) {
-				ret.add(transform(obj, targetPackage));
+				ret.add(transform(obj, targetPackage, cl));
 			}
 			return ret;
 		} else if (source instanceof Map) {
 			Map<String, Object> ret = new LinkedHashMap<String, Object>();
 			for (Map.Entry<String, Object> entry : ((Map<String, Object>)source).entrySet()) {
-				ret.put(entry.getKey(), transform(entry.getValue(), targetPackage));
+				ret.put(entry.getKey(), transform(entry.getValue(), targetPackage, cl));
 			}
 			return ret;
 		} else {
@@ -46,7 +46,7 @@ public class GwtTransformer {
 				Method setter = setters.get(entry.getKey());
 				if (setter != null) {
 					Method getter = entry.getValue();
-					Object val = transform(getter.invoke(source), targetPackage);
+					Object val = transform(getter.invoke(source), targetPackage, cl);
 					setter.invoke(ret, val);
 				}
 			}
