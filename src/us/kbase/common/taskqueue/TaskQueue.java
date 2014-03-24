@@ -31,7 +31,7 @@ public class TaskQueue {
     public static final String DERBY_DB_NAME = "GenomeCmpDb";
     public static final String QUEUE_TABLE_NAME = "task_queue";
 	
-	public TaskQueue(TaskQueueConfig config) throws ClassNotFoundException, SQLException {
+	public TaskQueue(TaskQueueConfig config, TaskRunner<?>... runners) throws ClassNotFoundException, SQLException {
 		this.config = config;
 		conn = getDbConnection(config.getQueueDbDir());
 		if (!conn.checkTable(QUEUE_TABLE_NAME)) {
@@ -47,13 +47,14 @@ public class TaskQueue {
 		for (int i = 0; i < allThreads.length; i++) {
 			allThreads[i] = startNewThread(i);
 		}
+		for (TaskRunner<?> runner : runners)
+			registerRunner(runner);
 		checkForUnfinishedTasks();
 	}
 	
-	public TaskQueue registerRunner(TaskRunner<?> runner) {
+	private void registerRunner(TaskRunner<?> runner) {
 		runner.init(config, config.getAllConfigProps());
 		runners.put(runner.getInputDataType(), runner);
-		return this;
 	}
 
 	public static DbConn getDbConnection(File dbParentDir) throws ClassNotFoundException, SQLException {
