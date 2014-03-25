@@ -99,7 +99,7 @@ public class JsonTokenStream extends JsonParser {
 	 * @throws IOException
 	 */
 	public JsonTokenStream(Object data) throws JsonParseException, IOException {
-		this(data, true);
+		this(data, false);
 	}
 
 	/**
@@ -109,7 +109,7 @@ public class JsonTokenStream extends JsonParser {
 	 * @throws JsonParseException
 	 * @throws IOException
 	 */
-	public JsonTokenStream(Object data, boolean optimizeLargeStrings) throws JsonParseException, IOException {
+	private JsonTokenStream(Object data, boolean optimizeLargeStrings) throws JsonParseException, IOException {
 		this(data, optimizeLargeStrings ? 1000000 : 0);
 	}
 	
@@ -120,7 +120,7 @@ public class JsonTokenStream extends JsonParser {
 	 * @throws JsonParseException
 	 * @throws IOException
 	 */
-	public JsonTokenStream(Object data, int largeStringbufferSize) throws JsonParseException, IOException {
+	private JsonTokenStream(Object data, int largeStringbufferSize) throws JsonParseException, IOException {
 		final long len;
 		if (data instanceof String) {
 			sdata = (String)data;
