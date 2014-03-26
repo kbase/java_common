@@ -26,7 +26,7 @@ public class MeasureSortJsonSpeed {
 
 	public static void main(String[] args) throws Exception {
 		File f = new File("src/us/kbase/common/performance/sortjson/83333.2.txt");
-		int sorts = 100;
+		int sorts = 5000;
 		boolean pauseForProfiler = false;
 		
 
@@ -89,7 +89,6 @@ public class MeasureSortJsonSpeed {
 		return new PerformanceMeasurement(m, "SortedKeysJsonFile JSON sort");
 	}
 
-	@SuppressWarnings("unused")
 	private static PerformanceMeasurement measureJsonSort(byte[] b, int sorts)
 			throws Exception {
 		List<Long> m = new LinkedList<Long>();
@@ -97,6 +96,7 @@ public class MeasureSortJsonSpeed {
 			long start = System.nanoTime();
 			@SuppressWarnings("unchecked")
 			Map<String, Object> d = SORT_MAPPER.readValue(b, Map.class);
+			@SuppressWarnings("unused")
 			byte[] t = SORT_MAPPER.writeValueAsBytes(d);
 			m.add(System.nanoTime() - start);
 		}

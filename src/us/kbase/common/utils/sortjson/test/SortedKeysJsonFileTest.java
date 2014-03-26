@@ -76,7 +76,7 @@ public class SortedKeysJsonFileTest {
 		Charset ch = Charset.forName("UTF-8");
 		byte[] data = json.getBytes(ch);
 		ByteArrayOutputStream os = new ByteArrayOutputStream();
-		new SortedKeysJsonFile(data).setMaxBufferSize(10 * 1024).setSkipKeyDuplication(skipDoubleKeys).writeIntoStream(os);
+		new SortedKeysJsonFile(data).setSkipKeyDuplication(skipDoubleKeys).writeIntoStream(os);
 		os.close();
 		return new String(os.toByteArray(), ch);
 	}
@@ -89,7 +89,7 @@ public class SortedKeysJsonFileTest {
 		byte[] data = writeRandomMapIntoByteArray(rnd, size);
 		long time = System.currentTimeMillis();
 		ByteArrayOutputStream os = new ByteArrayOutputStream();
-		new SortedKeysJsonFile(data).setMaxBufferSize(10 * 1024).setSkipKeyDuplication(true).writeIntoStream(os);
+		new SortedKeysJsonFile(data).setSkipKeyDuplication(true).writeIntoStream(os);
 		os.close();
 		System.out.println(size + ", " + data.length + ", " + (System.currentTimeMillis() - time));
 	}
@@ -112,7 +112,7 @@ public class SortedKeysJsonFileTest {
 			File f2 = new File(dir, "temp_large_map2.json");
 			long time = System.currentTimeMillis();
 			OutputStream os = new FileOutputStream(f2);
-			new SortedKeysJsonFile(f).setMaxBufferSize(10 * 1024).setSkipKeyDuplication(true).writeIntoStream(os);
+			new SortedKeysJsonFile(f, 10 * 1024).setSkipKeyDuplication(true).writeIntoStream(os);
 			os.close();
 			System.out.println(size + ", " + f.length() + ", " + (System.currentTimeMillis() - time));
 			f.delete();
@@ -140,7 +140,7 @@ public class SortedKeysJsonFileTest {
 			File f2 = new File(dir, "temp_large_map2.json");
 			long time = System.currentTimeMillis();
 			OutputStream os = new FileOutputStream(f2);
-			new SortedKeysJsonFile(f).setMaxBufferSize(bufSize).setSkipKeyDuplication(true).writeIntoStream(os);
+			new SortedKeysJsonFile(f, bufSize).setSkipKeyDuplication(true).writeIntoStream(os);
 			os.close();
 			System.out.println(bufSize + ", " + (System.currentTimeMillis() - time));
 			f2.delete();
@@ -169,7 +169,7 @@ public class SortedKeysJsonFileTest {
 			File f2 = new File(dir, "temp_large_list2.json");
 			long time = System.currentTimeMillis();
 			OutputStream os = new FileOutputStream(f2);
-			new SortedKeysJsonFile(f).setMaxBufferSize(10 * 1024).setSkipKeyDuplication(true).writeIntoStream(os);
+			new SortedKeysJsonFile(f, 10 * 1024).setSkipKeyDuplication(true).writeIntoStream(os);
 			os.close();
 			System.out.println(size + ", " + f.length() + ", " + (System.currentTimeMillis() - time));
 			f.delete();
@@ -197,7 +197,7 @@ public class SortedKeysJsonFileTest {
 			File f2 = new File(dir, "temp_large_list2.json");
 			long time = System.currentTimeMillis();
 			OutputStream os = new FileOutputStream(f2);
-			new SortedKeysJsonFile(f).setMaxBufferSize(bufSize).setSkipKeyDuplication(true).writeIntoStream(os);
+			new SortedKeysJsonFile(f, bufSize).setSkipKeyDuplication(true).writeIntoStream(os);
 			os.close();
 			System.out.println(bufSize + ", " + (System.currentTimeMillis() - time));
 			f2.delete();
