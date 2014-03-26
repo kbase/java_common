@@ -26,7 +26,7 @@ public class MeasureSortJsonSpeed {
 
 	public static void main(String[] args) throws Exception {
 		File f = new File("src/us/kbase/common/performance/sortjson/83333.2.txt");
-		int sorts = 100;
+		int sorts = 5000;
 		boolean pauseForProfiler = false;
 		
 
@@ -37,6 +37,7 @@ public class MeasureSortJsonSpeed {
 			Scanner s = new Scanner(System.in);
 			s.nextLine();
 		}
+		System.out.println("Starting tests");
 		PerformanceMeasurement js = measureJsonSort(b, sorts);
 		PerformanceMeasurement skfj = measureSKJFSort(b, sorts);
 //		PerformanceMeasurement skfjs = measureSKJFSortStringKeys(b, sorts);
