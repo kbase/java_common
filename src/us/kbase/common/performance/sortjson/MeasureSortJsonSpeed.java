@@ -37,6 +37,7 @@ public class MeasureSortJsonSpeed {
 			Scanner s = new Scanner(System.in);
 			s.nextLine();
 		}
+		System.out.println("Starting tests");
 		PerformanceMeasurement js = measureJsonSort(b, sorts);
 		PerformanceMeasurement skfj = measureSKJFSort(b, sorts);
 //		PerformanceMeasurement skfjs = measureSKJFSortStringKeys(b, sorts);
