@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
 import org.nocrala.tools.texttablefmt.Table;
 
@@ -26,12 +27,17 @@ public class MeasureSortJsonSpeed {
 	public static void main(String[] args) throws Exception {
 		File f = new File("src/us/kbase/common/performance/sortjson/83333.2.txt");
 		int sorts = 100;
+		
 
 		JsonNode jn = new ObjectMapper().readTree(f);
 		byte[] b = new ObjectMapper().writeValueAsBytes(jn);
-		PerformanceMeasurement js = measureJsonSort(b, sorts);
+		
+		System.out.println("File read into bytes[]. Start profiler, then hit enter to continue");
+		Scanner s = new Scanner(System.in);
+		s.nextLine();
+//		PerformanceMeasurement js = measureJsonSort(b, sorts);
 		PerformanceMeasurement skfj = measureSKJFSort(b, sorts);
-		renderResults(Arrays.asList(js, skfj));
+		renderResults(Arrays.asList(skfj));
 		
 	}
 	
