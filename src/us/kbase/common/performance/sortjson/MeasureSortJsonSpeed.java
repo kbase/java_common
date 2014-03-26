@@ -27,17 +27,20 @@ public class MeasureSortJsonSpeed {
 	public static void main(String[] args) throws Exception {
 		File f = new File("src/us/kbase/common/performance/sortjson/83333.2.txt");
 		int sorts = 100;
+		boolean pauseForProfiler = false;
 		
 
 		JsonNode jn = new ObjectMapper().readTree(f);
 		byte[] b = new ObjectMapper().writeValueAsBytes(jn);
-		
-		System.out.println("File read into bytes[]. Start profiler, then hit enter to continue");
-		Scanner s = new Scanner(System.in);
-		s.nextLine();
-//		PerformanceMeasurement js = measureJsonSort(b, sorts);
+		if (pauseForProfiler) {
+			System.out.println("File read into bytes[]. Start profiler, then hit enter to continue");
+			Scanner s = new Scanner(System.in);
+			s.nextLine();
+		}
+		PerformanceMeasurement js = measureJsonSort(b, sorts);
 		PerformanceMeasurement skfj = measureSKJFSort(b, sorts);
-		renderResults(Arrays.asList(skfj));
+//		PerformanceMeasurement skfjs = measureSKJFSortStringKeys(b, sorts);
+		renderResults(Arrays.asList(js, skfj));//, skfjs));
 		
 	}
 	
@@ -57,6 +60,21 @@ public class MeasureSortJsonSpeed {
 		System.out.println(tbl.render());
 	}
 
+	private static PerformanceMeasurement measureSKJFSortStringKeys(byte[] b, int sorts)
+			throws Exception {
+		List<Long> m = new LinkedList<Long>();
+		for (int i = 0; i < sorts; i++) {
+			long start = System.nanoTime();
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			new SortedKeysJsonFile(b).setUseStringsForKeyStoring(true)
+					.writeIntoStream(baos);
+			@SuppressWarnings("unused")
+			byte[] t = baos.toByteArray();
+			m.add(System.nanoTime() - start);
+		}
+		return new PerformanceMeasurement(m, "SortedKeysJsonFile JSON sort with String keys");
+	}
+	
 	private static PerformanceMeasurement measureSKJFSort(byte[] b, int sorts)
 			throws Exception {
 		List<Long> m = new LinkedList<Long>();
@@ -71,6 +89,7 @@ public class MeasureSortJsonSpeed {
 		return new PerformanceMeasurement(m, "SortedKeysJsonFile JSON sort");
 	}
 
+	@SuppressWarnings("unused")
 	private static PerformanceMeasurement measureJsonSort(byte[] b, int sorts)
 			throws Exception {
 		List<Long> m = new LinkedList<Long>();
@@ -78,7 +97,6 @@ public class MeasureSortJsonSpeed {
 			long start = System.nanoTime();
 			@SuppressWarnings("unchecked")
 			Map<String, Object> d = SORT_MAPPER.readValue(b, Map.class);
-			@SuppressWarnings("unused")
 			byte[] t = SORT_MAPPER.writeValueAsBytes(d);
 			m.add(System.nanoTime() - start);
 		}
