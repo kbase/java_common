@@ -264,6 +264,14 @@ public class JsonClientCaller {
 		this.fileForNextRpcResponse = f;
 	}
 	
+	public AuthToken getToken() {
+		return accessToken;
+	}
+	
+	public URL getURL() {
+		return serviceUrl;
+	}
+	
 	private static class UnclosableInputStream extends InputStream {
 		private InputStream inner;
 		private boolean isClosed = false;
