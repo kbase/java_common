@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import org.apache.commons.codec.digest.DigestUtils;
+//import org.apache.commons.codec.digest.DigestUtils;
 import org.nocrala.tools.texttablefmt.Table;
 
 import us.kbase.common.performance.PerformanceMeasurement;
@@ -41,12 +41,12 @@ public class MeasureSortJsonSpeed {
 		}
 		System.out.println("Starting tests");
 		PerformanceMeasurement js = measureJsonSort(b, sorts);
-		List<PerformanceMeasurement> hyb = measureHybridJackonSKJFSort(b, sorts,
-				Arrays.asList(0, 100, 1000, 10000, 100000, 1000000, 10000000));
-		hyb.add(0, js);
-//		PerformanceMeasurement skfj = measureSKJFSort(b, sorts, 0);
+//		List<PerformanceMeasurement> hyb = measureHybridJackonSKJFSort(b, sorts,
+//				Arrays.asList(0, 100, 1000, 10000, 100000, 1000000, 10000000));
+//		hyb.add(0, js);
+		PerformanceMeasurement skfj = measureSKJFSort(b, sorts, 0, "SortedKeysJsonFile JSON sort");
 //		PerformanceMeasurement skfjs = measureSKJFSortStringKeys(b, sorts);
-		renderResults(hyb);//, skfjs));
+		renderResults(Arrays.asList(js, skfj));//, skfjs));
 		
 	}
 	
@@ -75,7 +75,6 @@ public class MeasureSortJsonSpeed {
 		System.out.println(tbl.render());
 	}
 
-	@SuppressWarnings("unused")
 	private static PerformanceMeasurement measureSKJFSortStringKeys(byte[] b, int sorts)
 			throws Exception {
 		List<Long> m = new LinkedList<Long>();
