@@ -3,6 +3,7 @@ package us.kbase.common.utils.sortjson;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
@@ -11,7 +12,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
  * Class sorts map keys in JSON data stored in either in File or in byte array. 
@@ -33,9 +37,25 @@ public class SortedKeysJsonFile {
 	private boolean useStringsForKeyStoring = false;
 	private long maxMemoryForKeyStoring = -1;
 	
-	private static final ObjectMapper mapper = new ObjectMapper();
-	private static final Charset utf8 = Charset.forName("UTF-8");
+	private int maxBytesToInstantiate = 10000; //TODO temporary for testing
 	
+	private static final ObjectMapper MAPPER = new ObjectMapper();
+	private static final ObjectMapper SORT_MAPPER = new ObjectMapper();
+	static {
+		SORT_MAPPER.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+	}
+	private static final Charset UTF8 = Charset.forName("UTF-8");
+	
+	//TODO temporary for testing
+	public int getMaxBytesToInstantiate() {
+		return maxBytesToInstantiate;
+	}
+
+	public SortedKeysJsonFile setMaxBytesToInstantiate(int maxBytesToInstantiate) {
+		this.maxBytesToInstantiate = maxBytesToInstantiate;
+		return this;
+	}
+
 	/**
 	 * Defines file as data source.
 	 * @param f file data source
@@ -163,32 +183,37 @@ public class SortedKeysJsonFile {
 				break;
 			if (b == '{') {
 				path.add("{");
+				final long start = is.getFilePointer() - 1;
 				long[] keysByteSizeTemp = keysByteSize == null ? null : new long[] {keysByteSize[0]};
 				List<KeyValueLocation> fieldPosList = searchForMapCloseBracket(is, true, keysByteSizeTemp, path);
-				Collections.sort(fieldPosList);
 				long stop = is.getFilePointer();  // After close bracket
-				os.write(b);
-				boolean wasEntry = false;
-				KeyValueLocation prevLoc = null;
-				for (KeyValueLocation loc : fieldPosList) {
-					if (prevLoc != null && prevLoc.areKeysEqual(loc)) {
-						if (skipKeyDuplication) {
-							continue;
-						} else {
-							path.remove(path.size() - 1);
-							throw new KeyDuplicationException(getPathText(path), loc.getKey());
+				if (stop - start < maxBytesToInstantiate) {
+					sortViaObjectInstantiation(is, start, stop, os); //TODO deal with key duplication
+				} else {
+					Collections.sort(fieldPosList);
+					os.write(b);
+					boolean wasEntry = false;
+					KeyValueLocation prevLoc = null;
+					for (KeyValueLocation loc : fieldPosList) {
+						if (prevLoc != null && prevLoc.areKeysEqual(loc)) {
+							if (skipKeyDuplication) {
+								continue;
+							} else {
+								path.remove(path.size() - 1);
+								throw new KeyDuplicationException(getPathText(path), loc.getKey());
+							}
 						}
+						path.set(path.size() - 1, loc.getKey());
+						if (wasEntry)
+							os.write(',');
+						write(loc.keyStart, loc.stop, keysByteSizeTemp, path, os);
+						wasEntry = true;
+						prevLoc = loc;
 					}
-					path.set(path.size() - 1, loc.getKey());
-					if (wasEntry)
-						os.write(',');
-					write(loc.keyStart, loc.stop, keysByteSizeTemp, path, os);
-					wasEntry = true;
-					prevLoc = loc;
+					os.write('}');
+					is.setGlobalPos(stop);
 				}
-				os.write('}');
 				path.remove(path.size() - 1);
-				is.setGlobalPos(stop);
 			} else if (b == '"') {
 				os.write(b);
 				while (true) {
@@ -225,6 +250,13 @@ public class SortedKeysJsonFile {
 		}
 	}
 	
+	private void sortViaObjectInstantiation(PosBufInputStream is, long start,
+			long stop, UnthreadedBufferedOutputStream os) throws IOException {
+		final Object o = MAPPER.readValue(
+				new LimitedPosBufInputStream(is, start, stop), Object.class);
+		SORT_MAPPER.writeValue(os, o);
+	}
+
 	private static String getPathText(List<Object> path) {
 		if (path.size() == 0)
 			return "/";
@@ -339,6 +371,7 @@ public class SortedKeysJsonFile {
 	}
 
 	private String searchForEndQuot(PosBufInputStream raf, boolean createString) throws IOException {
+		//TODO probably need a max key length check here
 		ByteArrayOutputStream ret = null;
 		if (createString) {
 			ret = new ByteArrayOutputStream();
@@ -361,7 +394,7 @@ public class SortedKeysJsonFile {
 			}
 		}
 		if (createString)
-			return mapper.readValue(ret.toByteArray(), String.class);
+			return MAPPER.readValue(ret.toByteArray(), String.class);
 		return null;
 	}
 	
@@ -373,6 +406,8 @@ public class SortedKeysJsonFile {
 		raf.close();
 	}
 	
+	
+	//TODO might still be worthwhile to include dev-nobuffer changes for more effiecient reading of bytes for Jackson transforms
 	private static class RandomAccessSource {
 		private RandomAccessFile raf = null;
 		private byte[] byteSrc = null;
@@ -416,6 +451,26 @@ public class SortedKeysJsonFile {
 		}
 	}
 	
+	private static class LimitedPosBufInputStream extends InputStream {
+
+		private final PosBufInputStream is;
+		private final long stop;
+		
+		//stop isn't inclusive
+		public LimitedPosBufInputStream(PosBufInputStream is, long start, long stop) {
+			this.is = is;
+			this.stop = stop;
+			is.setGlobalPos(start);
+		}
+		@Override
+		public int read() throws IOException {
+			if (is.getFilePointer() >= stop) {
+				return -1;
+			}
+			return is.read();
+		}
+	}
+	
 	private static class PosBufInputStream {
 		RandomAccessSource raf;
 		private byte[] buffer;
@@ -452,7 +507,7 @@ public class SortedKeysJsonFile {
 			return ret;
 		}
 		
-		public boolean nextBufferLoad() throws IOException {
+		private boolean nextBufferLoad() throws IOException {
 			posInBuf = 0;
 			globalBufPos += bufSize;
 			raf.seek(globalBufPos);
@@ -468,20 +523,6 @@ public class SortedKeysJsonFile {
 			return bufSize > 0;
 		}
 		
-		public byte[] read(long start, byte[] array) throws IOException {
-			setGlobalPos(start);
-			for (int arrPos = 0; arrPos < array.length; arrPos++) {
-				if (posInBuf >= bufSize) {
-					if (!nextBufferLoad())
-						throw new IOException("Unexpected end of file");
-				}
-				array[arrPos] = buffer[posInBuf];
-				posInBuf++;
-			}
-			return array;
-		}
-
-		
 		public long getFilePointer() {
 			return globalBufPos + posInBuf;
 		}
@@ -493,7 +534,7 @@ public class SortedKeysJsonFile {
 		long stop;
 		
 		public KeyValueLocation(String key, long keyStart, long valueStart, long stop, boolean useString) {
-			this.key = useString ? key : key.getBytes(utf8);
+			this.key = useString ? key : key.getBytes(UTF8);
 			this.keyStart = keyStart;
 			this.stop = stop;
 		}
@@ -501,12 +542,12 @@ public class SortedKeysJsonFile {
 		public String getKey() {
 			if (key instanceof String)
 				return (String)key;
-			return new String((byte[])key, utf8);
+			return new String((byte[])key, UTF8);
 		}
 		
 		@Override
 		public String toString() {
-			return key + "(" + keyStart + "-" + stop + ")";
+			return key + ": " + getKey() + " (" + keyStart + "-" + stop + ")";
 		}
 		
 		@Override
