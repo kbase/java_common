@@ -158,7 +158,12 @@ public class SortedKeysJsonFile {
 		while (true) {
 			if (globalStop >= 0 && is.getPosition() >= globalStop)
 				break;
-			int b = is.read();
+			int b;
+			if (is.posInBuf >= is.bufSize && !is.nextBufferLoad()) {
+				b = -1;
+			} else {
+				b = is.buffer[is.posInBuf++] & 0xff;
+			}
 			if (b == -1)
 				break;
 			if (b == '{') {
@@ -192,14 +197,22 @@ public class SortedKeysJsonFile {
 			} else if (b == '"') {
 				os.write(b);
 				while (true) {
-					b = is.read();
+					if (is.posInBuf >= is.bufSize && !is.nextBufferLoad()) {
+						b = -1;
+					} else {
+						b = is.buffer[is.posInBuf++] & 0xff;
+					}
 					if (b == -1)
 						throw new IOException("String close quot wasn't found");
 					os.write(b);
 					if (b == '"')
 						break;
 					if (b == '\\') {
-						b = is.read();
+						if (is.posInBuf >= is.bufSize && !is.nextBufferLoad()) {
+							b = -1;
+						} else {
+							b = is.buffer[is.posInBuf++] & 0xff;
+						}
 						if (b == -1)
 							throw new IOException("String close quot wasn't found");
 						os.write(b);
@@ -251,7 +264,12 @@ public class SortedKeysJsonFile {
 		long currentKeyStart = -1;
 		long currentValueStart = -1;
 		while (true) {
-			int b = raf.read();
+			final int b;
+			if (raf.posInBuf >= raf.bufSize && !raf.nextBufferLoad()) {
+				b = -1;
+			} else {
+				b = raf.buffer[raf.posInBuf++] & 0xff;
+			}
 			if (b == -1)
 				throw new IOException("Mapping close bracket wasn't found");
 			if (b == '}') {
@@ -323,7 +341,12 @@ public class SortedKeysJsonFile {
 
 	private void searchForArrayCloseBracket(PosBufInputStream raf) throws IOException, TooManyKeysException {
 		while (true) {
-			int b = raf.read();
+			final int b;
+			if (raf.posInBuf >= raf.bufSize && !raf.nextBufferLoad()) {
+				b = -1;
+			} else {
+				b = raf.buffer[raf.posInBuf++] & 0xff;
+			}
 			if (b == -1)
 				throw new IOException("Array close bracket wasn't found");
 			if (b == ']') {
@@ -346,7 +369,12 @@ public class SortedKeysJsonFile {
 			ret.write('"');
 		}
 		while (true) {
-			int b = raf.read();
+			int b;
+			if (raf.posInBuf >= raf.bufSize && !raf.nextBufferLoad()) {
+				b = -1;
+			} else {
+				b = raf.buffer[raf.posInBuf++] & 0xff;
+			}
 			if (b == -1)
 				throw new IOException("String close quot wasn't found");
 			if (createString)
@@ -354,7 +382,11 @@ public class SortedKeysJsonFile {
 			if (b == '"')
 				break;
 			if (b == '\\') {
-				b = raf.read();
+				if (raf.posInBuf >= raf.bufSize && !raf.nextBufferLoad()) {
+					b = -1;
+				} else {
+					b = raf.buffer[raf.posInBuf++] & 0xff;
+				}
 				if (b == -1)
 					throw new IOException("String close quot wasn't found");
 				if (createString)
