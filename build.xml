@@ -26,10 +26,7 @@
     <include name="servlet/servlet-api-2.5.jar"/>
     <include name="syslog4j/syslog4j-0.9.46.jar"/>
     <include name="kbase/auth/kbase-auth-1391624254-0080b5c.jar"/>
-  </fileset>
-
-  <fileset id="jdoc-files" dir="${src}" defaultexcludes="yes">
-    <exclude name="**/test/*"/>
+    <include name="texttable/text-table-formatter-1.1.1.jar"/>
   </fileset>
 
   <path id="compile.classpath">
@@ -48,9 +45,12 @@
     <javac destdir="${classes}" includeantruntime="false" target="1.6" source="1.6"
       debug="true" classpathref="compile.classpath">
       <src path="${src}"/>
+      <exclude name="us/kbase/common/performance/**"/>
     </javac>
     <copy todir="${classes}">
-      <fileset dir="${src}"/>
+      <fileset dir="${src}">
+        <exclude name="us/kbase/common/performance/**"/>
+      </fileset>
     </copy>
     <!-- Make main jar file-->
     <jar destfile="${compile.jarfile}" basedir="${classes}"/>
@@ -60,9 +60,13 @@
     <javadoc access="protected" author="false" classpathref="compile.classpath"
       destdir="${docs}/javadoc" nodeprecated="false" nodeprecatedlist="false"
       noindex="false" nonavbar="false" notree="false"
-      source="1.7" splitindex="true" use="true" version="true" sourcepath="${src}">
+      source="1.7" splitindex="true" use="true" version="true">
       <link href="http://download.oracle.com/javase/7/docs/api/"/>
-      <fileset refid="jdoc-files"/>
+    <packageset dir="src" defaultexcludes="yes">
+      <include name="**"/>
+      <exclude name="**/test/*"/>
+      <exclude name="us/kbase/common/performance/**"/>
+    </packageset>
     </javadoc>
   </target>
 
