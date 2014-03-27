@@ -32,10 +32,10 @@ public class SortedKeysJsonFile {
 	private boolean skipKeyDuplication = false;
 	private boolean useStringsForKeyStoring = false;
 	private long maxMemoryForKeyStoring = -1;
-	
-	private static final ObjectMapper mapper = new ObjectMapper();
-	private static final Charset utf8 = Charset.forName("UTF-8");
-	
+
+	private static final ObjectMapper MAPPER = new ObjectMapper();
+	private static final Charset UTF8 = Charset.forName("UTF-8");
+
 	/**
 	 * Defines file as data source.
 	 * @param f file data source
@@ -79,7 +79,7 @@ public class SortedKeysJsonFile {
 	public boolean isUseStringsForKeyStoring() {
 		return useStringsForKeyStoring;
 	}
-	
+
 	/**
 	 * Defines if string type should be used for keeping key values in memory. 
 	 * false means keys are kept as byte arrays (default).
@@ -90,7 +90,7 @@ public class SortedKeysJsonFile {
 		this.useStringsForKeyStoring = useStringsForKeyStoring;
 		return this;
 	}
-	
+
 	/**
 	 * @return size of memory buffer which is used for caching data fragments from 
 	 * data source. Default value is 10k. It seems to be optimal because less value
@@ -101,7 +101,7 @@ public class SortedKeysJsonFile {
 	public int getMaxBufferSize() {
 		return maxBufferSize;
 	}
-	
+
 	/**
 	 * Defines size of memory buffer which is used for caching data fragments from 
 	 * data source. Default value is 10k. It seems to be optimal because less value
@@ -122,7 +122,7 @@ public class SortedKeysJsonFile {
 	public long getMaxMemoryForKeyStoring() {
 		return maxMemoryForKeyStoring;
 	}
-	
+
 	/**
 	 * Defines the limit of memory used for keeping keys for sorting. Use -1 or 0 
 	 * for switching this limitation off.
@@ -133,7 +133,7 @@ public class SortedKeysJsonFile {
 		this.maxMemoryForKeyStoring = maxMemoryForKeyStoring;
 		return this;
 	}
-	
+
 	/**
 	 * Method saves sorted data into output stream. It doesn't close internal input stream.
 	 * So please call close() after calling this method. 
@@ -150,13 +150,13 @@ public class SortedKeysJsonFile {
 		ubos.flush();
 		return this;
 	}
-	
+
 	private void write(long globalStart, long globalStop, long[] keysByteSize, 
 			List<Object> path, UnthreadedBufferedOutputStream os) 
 					throws IOException, KeyDuplicationException, TooManyKeysException {
 		PosBufInputStream is = setPosition(globalStart);
 		while (true) {
-			if (globalStop >= 0 && is.getFilePointer() >= globalStop)
+			if (globalStop >= 0 && is.getPosition() >= globalStop)
 				break;
 			int b = is.read();
 			if (b == -1)
@@ -166,7 +166,7 @@ public class SortedKeysJsonFile {
 				long[] keysByteSizeTemp = keysByteSize == null ? null : new long[] {keysByteSize[0]};
 				List<KeyValueLocation> fieldPosList = searchForMapCloseBracket(is, true, keysByteSizeTemp, path);
 				Collections.sort(fieldPosList);
-				long stop = is.getFilePointer();  // After close bracket
+				long stop = is.getPosition();  // After close bracket
 				os.write(b);
 				boolean wasEntry = false;
 				KeyValueLocation prevLoc = null;
@@ -188,7 +188,7 @@ public class SortedKeysJsonFile {
 				}
 				os.write('}');
 				path.remove(path.size() - 1);
-				is.setGlobalPos(stop);
+				is.setPosition(stop);
 			} else if (b == '"') {
 				os.write(b);
 				while (true) {
@@ -224,7 +224,7 @@ public class SortedKeysJsonFile {
 			}
 		}
 	}
-	
+
 	private static String getPathText(List<Object> path) {
 		if (path.size() == 0)
 			return "/";
@@ -236,13 +236,13 @@ public class SortedKeysJsonFile {
 		}
 		return sb.toString();
 	}
-	
+
 	private PosBufInputStream setPosition(long pos) throws IOException {
 		if (mainIs == null)
 			mainIs = new PosBufInputStream(raf, maxBufferSize);
-		return mainIs.setGlobalPos(pos);
+		return mainIs.setPosition(pos);
 	}
-	
+
 	private List<KeyValueLocation> searchForMapCloseBracket(PosBufInputStream raf, boolean createMap, 
 			long[] keysByteSize, List<Object> path) throws IOException, TooManyKeysException {
 		List<KeyValueLocation> ret = createMap ? new ArrayList<KeyValueLocation>() : null;
@@ -259,7 +259,7 @@ public class SortedKeysJsonFile {
 					if (currentValueStart < 0 || currentKeyStart < 0)
 						throw new IOException("Value without key in mapping");
 					ret.add(new KeyValueLocation(currentKey,currentKeyStart, currentValueStart, 
-							raf.getFilePointer() - 1, useStringsForKeyStoring));
+							raf.getPosition() - 1, useStringsForKeyStoring));
 					if (keysByteSize != null && path != null)
 						countKeysMemory(keysByteSize, currentKey, path);
 					currentKey = null;
@@ -269,7 +269,7 @@ public class SortedKeysJsonFile {
 				break;
 			} else if (b == '"') {
 				if (isBeforeField) {
-					currentKeyStart = raf.getFilePointer() - 1;
+					currentKeyStart = raf.getPosition() - 1;
 					currentKey = searchForEndQuot(raf, createMap);
 				} else {
 					searchForEndQuot(raf, false);
@@ -280,7 +280,7 @@ public class SortedKeysJsonFile {
 				if (createMap) {
 					if (currentKey == null)
 						throw new IOException("Unexpected colon sign before key text");
-					currentValueStart = raf.getFilePointer();
+					currentValueStart = raf.getPosition();
 				}
 				isBeforeField = false;
 			} else if (b == '{') {
@@ -294,7 +294,7 @@ public class SortedKeysJsonFile {
 					if (currentValueStart < 0 || currentKeyStart < 0)
 						throw new IOException("Value without key in mapping");
 					ret.add(new KeyValueLocation(currentKey, currentKeyStart, currentValueStart, 
-							raf.getFilePointer() - 1, useStringsForKeyStoring));
+							raf.getPosition() - 1, useStringsForKeyStoring));
 					if (keysByteSize != null && path != null)
 						countKeysMemory(keysByteSize, currentKey, path);
 					currentKey = null;
@@ -339,6 +339,7 @@ public class SortedKeysJsonFile {
 	}
 
 	private String searchForEndQuot(PosBufInputStream raf, boolean createString) throws IOException {
+		//TODO probably need a max key length check here
 		ByteArrayOutputStream ret = null;
 		if (createString) {
 			ret = new ByteArrayOutputStream();
@@ -361,10 +362,10 @@ public class SortedKeysJsonFile {
 			}
 		}
 		if (createString)
-			return mapper.readValue(ret.toByteArray(), String.class);
+			return MAPPER.readValue(ret.toByteArray(), String.class);
 		return null;
 	}
-	
+
 	/**
 	 * Closing inner input streams after writing.
 	 * @throws IOException
@@ -372,12 +373,12 @@ public class SortedKeysJsonFile {
 	public void close() throws IOException {
 		raf.close();
 	}
-	
+
 	private static class RandomAccessSource {
 		private RandomAccessFile raf = null;
 		private byte[] byteSrc = null;
 		private int byteSrcPos = 0;
-		
+
 		public RandomAccessSource(File f) throws IOException {
 			raf = new RandomAccessFile(f, "r");
 		}
@@ -385,44 +386,44 @@ public class SortedKeysJsonFile {
 		public RandomAccessSource(byte[] array) throws IOException {
 			byteSrc = array;
 		}
-		
-	    public void seek(long pos) throws IOException {
-	    	if (raf != null) {
-	    		raf.seek(pos);
-	    	} else {
-	    		byteSrcPos = (int)pos;
-	    	}
-	    }
 
-	    public int read(byte b[], int off, int len) throws IOException {
-	    	if (raf != null) {
-	    		return raf.read(b, off, len);
-	    	} else {
-	    		if (off + len > b.length)
-	    			throw new IOException();
-	    		if (byteSrcPos + len > byteSrc.length)
-	    			len = byteSrc.length - byteSrcPos;
-	    		if (len <= 0)
-	    			return -1;
-	    		System.arraycopy(byteSrc, byteSrcPos, b, off, len);
-	    		byteSrcPos += len;
-	    		return len;
-	    	}
-	    }
-	    
+		public void seek(long pos) throws IOException {
+			if (raf != null) {
+				raf.seek(pos);
+			} else {
+				byteSrcPos = (int)pos;
+			}
+		}
+
+		public int read(byte b[], int off, int len) throws IOException {
+			if (raf != null) {
+				return raf.read(b, off, len);
+			} else {
+				if (off + len > b.length)
+					throw new IOException();
+				if (byteSrcPos + len > byteSrc.length)
+					len = byteSrc.length - byteSrcPos;
+				if (len <= 0)
+					return -1;
+				System.arraycopy(byteSrc, byteSrcPos, b, off, len);
+				byteSrcPos += len;
+				return len;
+			}
+		}
+
 		public void close() throws IOException {
 			if (raf != null)
 				raf.close();
 		}
 	}
-	
+
 	private static class PosBufInputStream {
 		RandomAccessSource raf;
 		private byte[] buffer;
 		private long globalBufPos;
 		private int posInBuf;
 		private int bufSize;
-		
+
 		public PosBufInputStream(RandomAccessSource raf, int maxBufSize) {
 			this.raf = raf;
 			this.buffer = new byte[maxBufSize];
@@ -430,8 +431,8 @@ public class SortedKeysJsonFile {
 			this.posInBuf = 0;
 			this.bufSize = 0;
 		}
-		
-		public PosBufInputStream setGlobalPos(long pos) {
+
+		public PosBufInputStream setPosition(long pos) {
 			if (pos >= globalBufPos && pos < globalBufPos + bufSize) {
 				posInBuf = (int)(pos - globalBufPos);
 			} else {
@@ -441,7 +442,7 @@ public class SortedKeysJsonFile {
 			}
 			return this;
 		}
-		
+
 		public int read() throws IOException {
 			if (posInBuf >= bufSize) {
 				if (!nextBufferLoad())
@@ -451,8 +452,8 @@ public class SortedKeysJsonFile {
 			posInBuf++;
 			return ret;
 		}
-		
-		public boolean nextBufferLoad() throws IOException {
+
+		private boolean nextBufferLoad() throws IOException {
 			posInBuf = 0;
 			globalBufPos += bufSize;
 			raf.seek(globalBufPos);
@@ -467,9 +468,9 @@ public class SortedKeysJsonFile {
 			}
 			return bufSize > 0;
 		}
-		
+
 		public byte[] read(long start, byte[] array) throws IOException {
-			setGlobalPos(start);
+			setPosition(start);
 			for (int arrPos = 0; arrPos < array.length; arrPos++) {
 				if (posInBuf >= bufSize) {
 					if (!nextBufferLoad())
@@ -481,39 +482,39 @@ public class SortedKeysJsonFile {
 			return array;
 		}
 
-		
-		public long getFilePointer() {
+
+		public long getPosition() {
 			return globalBufPos + posInBuf;
 		}
 	}
-	
+
 	private static class KeyValueLocation implements Comparable<KeyValueLocation> {
 		Object key;
 		long keyStart;
 		long stop;
-		
+
 		public KeyValueLocation(String key, long keyStart, long valueStart, long stop, boolean useString) {
-			this.key = useString ? key : key.getBytes(utf8);
+			this.key = useString ? key : key.getBytes(UTF8);
 			this.keyStart = keyStart;
 			this.stop = stop;
 		}
-		
+
 		public String getKey() {
 			if (key instanceof String)
 				return (String)key;
-			return new String((byte[])key, utf8);
+			return new String((byte[])key, UTF8);
 		}
-		
+
 		@Override
 		public String toString() {
-			return key + "(" + keyStart + "-" + stop + ")";
+			return key + ": " + getKey() + " (" + keyStart + "-" + stop + ")";
 		}
-		
+
 		@Override
 		public int compareTo(KeyValueLocation o) {
 			return getKey().compareTo(o.getKey());
 		}
-		
+
 		public boolean areKeysEqual(KeyValueLocation loc) {
 			if (key instanceof String || loc.key instanceof String) {
 				return getKey().equals(loc.getKey());
@@ -528,58 +529,59 @@ public class SortedKeysJsonFile {
 			return true;
 		}
 	}
-	
+
+	//removes thread safety code; per Roman 5x faster without it
 	private static class UnthreadedBufferedOutputStream extends OutputStream {
-	    OutputStream out;
-	    byte buffer[];
-	    int bufSize;
+		OutputStream out;
+		byte buffer[];
+		int bufSize;
 
-	    public UnthreadedBufferedOutputStream(OutputStream out, int size) throws IOException {
-	        this.out = out;
-	        if (size <= 0) {
-	            throw new IOException("Buffer size should be a positive number");
-	        }
-	        buffer = new byte[size];
-	    }
+		public UnthreadedBufferedOutputStream(OutputStream out, int size) throws IOException {
+			this.out = out;
+			if (size <= 0) {
+				throw new IOException("Buffer size should be a positive number");
+			}
+			buffer = new byte[size];
+		}
 
-	    void flushBuffer() throws IOException {
-	        if (bufSize > 0) {
-	            out.write(buffer, 0, bufSize);
-	            bufSize = 0;
-	        }
-	    }
+		void flushBuffer() throws IOException {
+			if (bufSize > 0) {
+				out.write(buffer, 0, bufSize);
+				bufSize = 0;
+			}
+		}
 
-	    public void write(int b) throws IOException {
-	        if (bufSize >= buffer.length) {
-	            flushBuffer();
-	        }
-	        buffer[bufSize++] = (byte)b;
-	    }
+		public void write(int b) throws IOException {
+			if (bufSize >= buffer.length) {
+				flushBuffer();
+			}
+			buffer[bufSize++] = (byte)b;
+		}
 
-	    public void write(byte b[]) throws IOException {
-	        write(b, 0, b.length);
-	    }
+		public void write(byte b[]) throws IOException {
+			write(b, 0, b.length);
+		}
 
-	    public void write(byte b[], int off, int len) throws IOException {
-	        if (len >= buffer.length) {
-	            flushBuffer();
-	            out.write(b, off, len);
-	            return;
-	        }
-	        if (len > buffer.length - bufSize) {
-	            flushBuffer();
-	        }
-	        System.arraycopy(b, off, buffer, bufSize, len);
-	        bufSize += len;
-	    }
+		public void write(byte b[], int off, int len) throws IOException {
+			if (len >= buffer.length) {
+				flushBuffer();
+				out.write(b, off, len);
+				return;
+			}
+			if (len > buffer.length - bufSize) {
+				flushBuffer();
+			}
+			System.arraycopy(b, off, buffer, bufSize, len);
+			bufSize += len;
+		}
 
-	    public void flush() throws IOException {
-	        flushBuffer();
-	        out.flush();
-	    }
-	    
-	    public void close() throws IOException {
-	    	flush();
-	    }
+		public void flush() throws IOException {
+			flushBuffer();
+			out.flush();
+		}
+
+		public void close() throws IOException {
+			flush();
+		}
 	}
 }
