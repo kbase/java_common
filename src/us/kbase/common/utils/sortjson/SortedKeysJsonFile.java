@@ -33,8 +33,8 @@ public class SortedKeysJsonFile {
 	private boolean useStringsForKeyStoring = false;
 	private long maxMemoryForKeyStoring = -1;
 
-	private static final ObjectMapper mapper = new ObjectMapper();
-	private static final Charset utf8 = Charset.forName("UTF-8");
+	private static final ObjectMapper MAPPER = new ObjectMapper();
+	private static final Charset UTF8 = Charset.forName("UTF-8");
 
 	/**
 	 * Defines file as data source.
@@ -156,7 +156,7 @@ public class SortedKeysJsonFile {
 					throws IOException, KeyDuplicationException, TooManyKeysException {
 		PosBufInputStream is = setPosition(globalStart);
 		while (true) {
-			if (globalStop >= 0 && is.getFilePointer() >= globalStop)
+			if (globalStop >= 0 && is.getPosition() >= globalStop)
 				break;
 			int b = is.read();
 			if (b == -1)
@@ -166,7 +166,7 @@ public class SortedKeysJsonFile {
 				long[] keysByteSizeTemp = keysByteSize == null ? null : new long[] {keysByteSize[0]};
 				List<KeyValueLocation> fieldPosList = searchForMapCloseBracket(is, true, keysByteSizeTemp, path);
 				Collections.sort(fieldPosList);
-				long stop = is.getFilePointer();  // After close bracket
+				long stop = is.getPosition();  // After close bracket
 				os.write(b);
 				boolean wasEntry = false;
 				KeyValueLocation prevLoc = null;
@@ -188,7 +188,7 @@ public class SortedKeysJsonFile {
 				}
 				os.write('}');
 				path.remove(path.size() - 1);
-				is.setGlobalPos(stop);
+				is.setPosition(stop);
 			} else if (b == '"') {
 				os.write(b);
 				while (true) {
@@ -240,7 +240,7 @@ public class SortedKeysJsonFile {
 	private PosBufInputStream setPosition(long pos) throws IOException {
 		if (mainIs == null)
 			mainIs = new PosBufInputStream(raf, maxBufferSize);
-		return mainIs.setGlobalPos(pos);
+		return mainIs.setPosition(pos);
 	}
 
 	private List<KeyValueLocation> searchForMapCloseBracket(PosBufInputStream raf, boolean createMap, 
@@ -259,7 +259,7 @@ public class SortedKeysJsonFile {
 					if (currentValueStart < 0 || currentKeyStart < 0)
 						throw new IOException("Value without key in mapping");
 					ret.add(new KeyValueLocation(currentKey,currentKeyStart, currentValueStart, 
-							raf.getFilePointer() - 1, useStringsForKeyStoring));
+							raf.getPosition() - 1, useStringsForKeyStoring));
 					if (keysByteSize != null && path != null)
 						countKeysMemory(keysByteSize, currentKey, path);
 					currentKey = null;
@@ -269,7 +269,7 @@ public class SortedKeysJsonFile {
 				break;
 			} else if (b == '"') {
 				if (isBeforeField) {
-					currentKeyStart = raf.getFilePointer() - 1;
+					currentKeyStart = raf.getPosition() - 1;
 					currentKey = searchForEndQuot(raf, createMap);
 				} else {
 					searchForEndQuot(raf, false);
@@ -280,7 +280,7 @@ public class SortedKeysJsonFile {
 				if (createMap) {
 					if (currentKey == null)
 						throw new IOException("Unexpected colon sign before key text");
-					currentValueStart = raf.getFilePointer();
+					currentValueStart = raf.getPosition();
 				}
 				isBeforeField = false;
 			} else if (b == '{') {
@@ -294,7 +294,7 @@ public class SortedKeysJsonFile {
 					if (currentValueStart < 0 || currentKeyStart < 0)
 						throw new IOException("Value without key in mapping");
 					ret.add(new KeyValueLocation(currentKey, currentKeyStart, currentValueStart, 
-							raf.getFilePointer() - 1, useStringsForKeyStoring));
+							raf.getPosition() - 1, useStringsForKeyStoring));
 					if (keysByteSize != null && path != null)
 						countKeysMemory(keysByteSize, currentKey, path);
 					currentKey = null;
@@ -362,7 +362,7 @@ public class SortedKeysJsonFile {
 			}
 		}
 		if (createString)
-			return mapper.readValue(ret.toByteArray(), String.class);
+			return MAPPER.readValue(ret.toByteArray(), String.class);
 		return null;
 	}
 
@@ -432,7 +432,7 @@ public class SortedKeysJsonFile {
 			this.bufSize = 0;
 		}
 
-		public PosBufInputStream setGlobalPos(long pos) {
+		public PosBufInputStream setPosition(long pos) {
 			if (pos >= globalBufPos && pos < globalBufPos + bufSize) {
 				posInBuf = (int)(pos - globalBufPos);
 			} else {
@@ -453,7 +453,7 @@ public class SortedKeysJsonFile {
 			return ret;
 		}
 
-		public boolean nextBufferLoad() throws IOException {
+		private boolean nextBufferLoad() throws IOException {
 			posInBuf = 0;
 			globalBufPos += bufSize;
 			raf.seek(globalBufPos);
@@ -470,7 +470,7 @@ public class SortedKeysJsonFile {
 		}
 
 		public byte[] read(long start, byte[] array) throws IOException {
-			setGlobalPos(start);
+			setPosition(start);
 			for (int arrPos = 0; arrPos < array.length; arrPos++) {
 				if (posInBuf >= bufSize) {
 					if (!nextBufferLoad())
@@ -483,7 +483,7 @@ public class SortedKeysJsonFile {
 		}
 
 
-		public long getFilePointer() {
+		public long getPosition() {
 			return globalBufPos + posInBuf;
 		}
 	}
@@ -494,7 +494,7 @@ public class SortedKeysJsonFile {
 		long stop;
 
 		public KeyValueLocation(String key, long keyStart, long valueStart, long stop, boolean useString) {
-			this.key = useString ? key : key.getBytes(utf8);
+			this.key = useString ? key : key.getBytes(UTF8);
 			this.keyStart = keyStart;
 			this.stop = stop;
 		}
@@ -502,12 +502,12 @@ public class SortedKeysJsonFile {
 		public String getKey() {
 			if (key instanceof String)
 				return (String)key;
-			return new String((byte[])key, utf8);
+			return new String((byte[])key, UTF8);
 		}
 
 		@Override
 		public String toString() {
-			return key + "(" + keyStart + "-" + stop + ")";
+			return key + ": " + getKey() + " (" + keyStart + "-" + stop + ")";
 		}
 
 		@Override
