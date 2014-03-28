@@ -15,6 +15,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 public class RandomGenerationLongTest {
+	
+	public static final boolean PRINT_TIMING = false;
+	
 	@Test
 	public void testRandom() throws Exception {
 		Random r = new Random(1234567890L);
@@ -23,30 +26,42 @@ public class RandomGenerationLongTest {
 			dir.mkdir();
 		File tempFile = File.createTempFile("tmp_rnd", ".json", dir);
 		int maxSize = 0;
+		if (PRINT_TIMING) {
+			System.out.println("Test   Size (b) Gen (ms) Jackson (ms) Byte (ms) File (ms)");
+		}
 		for (int i = 0; i < 300; i++) {
 			long timeGener = System.currentTimeMillis();
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			JsonGenerator jgen = new ObjectMapper().getFactory().createGenerator(baos);
 			generateRandomData(r, new int[] {0}, 0, jgen);
 			jgen.close();
-			byte[] unsertedJson = baos.toByteArray();
+			byte[] unsortedJson = baos.toByteArray();
 			timeGener = System.currentTimeMillis() - timeGener;
-			if (maxSize < unsertedJson.length)
-				maxSize = unsertedJson.length;
+			if (maxSize < unsortedJson.length)
+				maxSize = unsortedJson.length;
 			long timeJackson = System.currentTimeMillis();
-			byte[] expectedJson = sortWithJackson(unsertedJson);
+			byte[] expectedJson = sortWithJackson(unsortedJson);
 			timeJackson = System.currentTimeMillis() - timeJackson;
 			long timeBytes = System.currentTimeMillis();
-			byte[] actualJson = sortWithFileSorter(unsertedJson, null);
+			byte[] actualJson = sortWithFileSorter(unsortedJson, null);
 			timeBytes = System.currentTimeMillis() - timeBytes;
 			Assert.assertArrayEquals("i=" + i, expectedJson, actualJson);
 			actualJson = null;
 			long timeFile = System.currentTimeMillis();
-			actualJson = sortWithFileSorter(unsertedJson, tempFile);
+			actualJson = sortWithFileSorter(unsortedJson, tempFile);
 			timeFile = System.currentTimeMillis() - timeFile;
 			Assert.assertArrayEquals("i=" + i + " (files)", expectedJson, actualJson);
-			//System.out.println("i=" + i + ", size=" + unsertedJson.length + ", " +
-			//		"Tg=" + timeGener + ", Tj=" + timeJackson + ", Tb=" + timeBytes + ", Tf=" + timeFile);
+			if (PRINT_TIMING) {
+				System.out.print(String.format("%4d ", i));
+				System.out.print(String.format("%10d   ", unsortedJson.length));
+				System.out.print(String.format("%6d       ", timeGener));
+				System.out.print(String.format("%6d    ", timeJackson));
+				System.out.print(String.format("%6d    ", timeBytes));
+				System.out.print(String.format("%6d ", timeFile));
+				System.out.println();
+			}
+//			System.out.println("i=" + i + ", size=" + unsertedJson.length + ", " +
+//					"Tg=" + timeGener + ", Tj=" + timeJackson + ", Tb=" + timeBytes + ", Tf=" + timeFile);
 		}
 		System.out.println("Max.size: " + maxSize);
 	}
