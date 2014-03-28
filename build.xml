@@ -82,6 +82,7 @@
       <test name="us.kbase.common.utils.sortjson.test.SortedKeysJsonFileTest"/>
       <test name="us.kbase.common.test.utils.TestUTF8Utils"/>
       <test name="us.kbase.common.test.service.TestJsonTokenStream"/>
+      <test name="us.kbase.common.utils.sortjson.test.RandomGenerationLongTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>
