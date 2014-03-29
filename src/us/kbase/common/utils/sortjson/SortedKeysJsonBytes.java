@@ -118,7 +118,7 @@ public class SortedKeysJsonBytes {
 					if (pos[0] >= data.length)
 						break;
 					b = data[pos[0]++] & 0xff;
-					if (b == '}' || b == ']' || b == ',') {
+					if (b == '}' || b == ']' || b == ',' || b == ' ' || b == '\t' || b == '\r' || b == '\n') {
 						pos[0]--;
 						break;
 					}

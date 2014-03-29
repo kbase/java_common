@@ -1,13 +1,6 @@
 package us.kbase.common.utils.sortjson.test;
 
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.charset.Charset;
-import java.util.Random;
 
 import junit.framework.Assert;
 
@@ -15,19 +8,13 @@ import org.junit.Test;
 
 import us.kbase.common.utils.sortjson.KeyDuplicationException;
 import us.kbase.common.utils.sortjson.SortedKeysJsonBytes;
-import us.kbase.common.utils.sortjson.SortedKeysJsonFile;
-
-import com.fasterxml.jackson.core.JsonEncoding;
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class SortedKeysJsonBytesTest {
 	
 	@Test
 	public void testArrayWithMap() {
 		assertSort(
-				"[1, 2.0, \"4{\\\"\", {\"kkk\":\"vvv\",\n\"aaa\":\"bbb\"} , \"}3\\\\\", true]", 
+				"[1, 2.0 , \"4{\\\"\", {\"kkk\":\"vvv\",\n\"aaa\":\"bbb\" } , \"}3\\\\\", true ]", 
 				"[1,2.0,\"4{\\\"\",{\"aaa\":\"bbb\",\"kkk\":\"vvv\"},\"}3\\\\\",true]");
 	}
 
