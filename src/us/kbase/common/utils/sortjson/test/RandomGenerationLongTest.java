@@ -8,15 +8,18 @@ import java.util.Random;
 import org.junit.Assert;
 import org.junit.Test;
 
+import us.kbase.common.utils.sortjson.SortedKeysJsonBytes;
 import us.kbase.common.utils.sortjson.SortedKeysJsonFile;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 public class RandomGenerationLongTest {
 	
 	public static final boolean PRINT_TIMING = false;
+	public static final boolean USE_MODEL_DATA = false;
 	
 	@Test
 	public void testRandom() throws Exception {
@@ -27,13 +30,13 @@ public class RandomGenerationLongTest {
 		File tempFile = File.createTempFile("tmp_rnd", ".json", dir);
 		int maxSize = 0;
 		if (PRINT_TIMING) {
-			System.out.println("Test   Size (b) Gen (ms) Jackson (ms) Byte (ms) File (ms)");
+			System.out.println("Test   Size (b) Gen (ms) Jackson (ms) Byte (ms) File (ms) Fast (ms)");
 		}
 		for (int i = 0; i < 300; i++) {
 			long timeGener = System.currentTimeMillis();
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			JsonGenerator jgen = new ObjectMapper().getFactory().createGenerator(baos);
-			generateRandomData(r, new int[] {0}, 0, jgen);
+			generateData(r, jgen);
 			jgen.close();
 			byte[] unsortedJson = baos.toByteArray();
 			timeGener = System.currentTimeMillis() - timeGener;
@@ -51,19 +54,33 @@ public class RandomGenerationLongTest {
 			actualJson = sortWithFileSorter(unsortedJson, tempFile);
 			timeFile = System.currentTimeMillis() - timeFile;
 			Assert.assertArrayEquals("i=" + i + " (files)", expectedJson, actualJson);
+			actualJson = null;
+			long timeFast = System.currentTimeMillis();
+			actualJson = sortWithByteSorter(unsortedJson);
+			timeFast = System.currentTimeMillis() - timeFast;
+			Assert.assertArrayEquals("i=" + i, expectedJson, actualJson);
 			if (PRINT_TIMING) {
 				System.out.print(String.format("%4d ", i));
 				System.out.print(String.format("%10d   ", unsortedJson.length));
 				System.out.print(String.format("%6d       ", timeGener));
 				System.out.print(String.format("%6d    ", timeJackson));
 				System.out.print(String.format("%6d    ", timeBytes));
-				System.out.print(String.format("%6d ", timeFile));
+				System.out.print(String.format("%6d    ", timeFile));
+				System.out.print(String.format("%6d ", timeFast));
 				System.out.println();
 			}
-//			System.out.println("i=" + i + ", size=" + unsertedJson.length + ", " +
-//					"Tg=" + timeGener + ", Tj=" + timeJackson + ", Tb=" + timeBytes + ", Tf=" + timeFile);
 		}
 		System.out.println("Max.size: " + maxSize);
+	}
+	
+	private static void generateData(Random r, JsonGenerator jgen) throws Exception {
+		if (USE_MODEL_DATA) {
+			File f = new File("src/us/kbase/common/performance/sortjson/83333.2.txt");
+			JsonNode jn = new ObjectMapper().readTree(f);
+			new ObjectMapper().writeValue(jgen, jn);
+		} else {
+			generateRandomData(r, new int[] {0}, 0, jgen);
+		}
 	}
 	
 	private static byte[] sortWithFileSorter(byte[] data, File tempFile) throws Exception {
@@ -82,6 +99,10 @@ public class RandomGenerationLongTest {
 		if (tempFile != null)
 			tempFile.delete();
 		return baos.toByteArray();
+	}
+
+	private static byte[] sortWithByteSorter(byte[] data) throws Exception {
+		return new SortedKeysJsonBytes(data).getSorted();
 	}
 	
 	private static byte[] sortWithJackson(byte[] json) throws Exception {
