@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -94,7 +95,8 @@ public class SortedKeysJsonBytes {
 		return sb.toString();
 	}
 
-	private JsonElement searchForElement(int[] pos, List<Object> path) throws IOException {
+	private JsonElement searchForElement(int[] pos, List<Object> path) 
+			throws IOException, KeyDuplicationException {
 		int b = -1;
 		while (true) {
 			if (pos[0] >= data.length)
@@ -128,13 +130,15 @@ public class SortedKeysJsonBytes {
 	}
 
 	
-	private JsonMapElement searchForMapCloseBracket(int[] pos, List<Object> path) throws IOException {
+	private JsonMapElement searchForMapCloseBracket(int[] pos, List<Object> path) 
+			throws IOException, KeyDuplicationException {
 		List<KeyValueLocation> ret = new ArrayList<KeyValueLocation>();
 		boolean isBeforeField = true;
 		String currentKey = null;
 		int currentKeyStart = -1;
 		int currentKeyStop = -1;
 		JsonElement currentValue = null;
+		path.add("{");
 		while (true) {
 			if (pos[0] >= data.length)
 				throw new IOException("Mapping close bracket wasn't found");
@@ -161,6 +165,7 @@ public class SortedKeysJsonBytes {
 			} else if (b == ':') {
 				if (!isBeforeField)
 					throw new IOException("Unexpected colon sign in the middle of value text");
+				path.set(path.size() - 1, currentKey);
 				currentValue = searchForElement(pos, path);
 				isBeforeField = false;
 			} else if (b == ',') {
@@ -179,18 +184,32 @@ public class SortedKeysJsonBytes {
 					throw new IOException("Unexpected character: " + (char)b);
 			}
 		}
+		path.remove(path.size() - 1);
 		Collections.sort(ret);
-		// TODO: check key duplication
+		String prevKey = null;
+		for (Iterator<KeyValueLocation> it = ret.iterator(); it.hasNext();) {
+			String key = it.next().key;
+			if (prevKey != null && prevKey.equals(key)) {
+				if (isSkipKeyDuplication()) {
+					it.remove();
+				} else {
+					throw new KeyDuplicationException(getPathText(path), key);
+				}
+			}
+			prevKey = key;
+		}
 		return new JsonMapElement(ret);
 	}
 
-	private JsonArrayElement searchForArrayCloseBracket(int[] pos, List<Object> path) throws IOException {
+	private JsonArrayElement searchForArrayCloseBracket(int[] pos, List<Object> path) 
+			throws IOException, KeyDuplicationException {
 		List<JsonElement> items = new ArrayList<JsonElement>();
 		if (pos[0] >= data.length)
 			throw new IOException("Array close bracket wasn't found");
 		int b = data[pos[0]++] & 0xff;
 		if (b != ']') {
 			pos[0]--;
+			path.add(0);
 			while (true) {
 				items.add(searchForElement(pos, path));
 				if (pos[0] >= data.length)
@@ -207,7 +226,10 @@ public class SortedKeysJsonBytes {
 				} else if (b != ',') {
 					throw new IOException("Unexpected character: " + (char)b);
 				}
+				int itemNum = (Integer)path.get(path.size() - 1);
+				path.set(path.size() - 1, itemNum + 1);
 			}
+			path.remove(path.size() - 1);
 		}
 		return new JsonArrayElement(items);
 	}
