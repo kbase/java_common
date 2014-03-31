@@ -179,22 +179,22 @@ public class TestJsonTokenStream {
 	@Test
 	public void streamingDataWithUTF8LongChars() throws Exception {
 		StringBuilder sb = new StringBuilder();
-		sb.append("[\"");
+//		sb.append("[\"");
 		//28 ttl bytes in UTF-8
 		sb.appendCodePoint(0x10310); //4 byte
 		sb.appendCodePoint(0x4A);    //1 byte
 		sb.appendCodePoint(0x103B0); //4 byte
 		sb.appendCodePoint(0x120);   //2 byte
-		sb.appendCodePoint(0x1D120); //4 byte <- starts @ 13th bit in UTF8
+		sb.appendCodePoint(0x1D120); //4 byte
 		sb.appendCodePoint(0x0A90);  //3 byte
 		sb.appendCodePoint(0x6A);    //1 byte
 		sb.appendCodePoint(0x6A);    //1 byte
-		sb.appendCodePoint(0x1D120); //4 byte <- starts @ 13th char in java UTF16
 		sb.appendCodePoint(0x1D120); //4 byte
-		sb.append("\"]");
+		sb.appendCodePoint(0x1D120); //4 byte
+//		sb.append("\"]");
 		
-		String exp = sb.toString();
-		byte[] b = exp.getBytes();
+		String exp = "[\"" + sb.toString() + sb.toString() + "\"]";
+		byte[] b = exp.getBytes(utf8);
 		File f = File.createTempFile("TestJsonTokenStream-", null);
 		f.deleteOnExit();
 		new FileOutputStream(f).write(b);
@@ -218,7 +218,7 @@ public class TestJsonTokenStream {
 		jts.writeTokens(jgen);
 		jgen.flush();
 		String res = new String(target.toByteArray(), utf8);
-		assertThat("UTF8 long chars past buffer end processed correctly" +
+		assertThat("UTF8 long chars past buffer end processed correctly " +
 				String.format("with data %s and buffersize %s", data, buffersize),
 				res, is(exp));
 	}

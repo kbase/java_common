@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -18,6 +19,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,6 +27,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.core.Base64Variant;
 import com.fasterxml.jackson.core.FormatSchema;
+import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonLocation;
@@ -37,7 +40,10 @@ import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.SerializableString;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.core.io.IOContext;
+import com.fasterxml.jackson.core.json.ByteSourceJsonBootstrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.core.util.BufferRecycler;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
@@ -82,12 +88,29 @@ public class JsonTokenStream extends JsonParser {
 	//optinally true if this JTS instance wraps a known good JSON object and the root is at /
 	//means that the object can simply be dumped into the JsonGenerator output stream
 	private boolean goodWholeJSON = false;
+	//the encoding of the bytes or file, if any.
+	private final Charset encoding;
 	
 	private static final boolean debug = false;  //true;
 	private static final Charset utf8 = Charset.forName("UTF-8");
 	private static final String largeStringSubstPrefix = "^*->#";
 	private static DebugOpenCloseListener debugOpenCloseListener = null;
 	private int copyBufferSize = 100000;
+	
+	private static final Map<JsonEncoding, Charset> ENCODING_TO_CHARSET =
+			new HashMap<JsonEncoding, Charset>(5);
+	static {
+		ENCODING_TO_CHARSET.put(JsonEncoding.UTF8, Charset.forName("UTF-8"));
+		ENCODING_TO_CHARSET.put(JsonEncoding.UTF16_BE,
+				Charset.forName("UTF-16BE"));
+		ENCODING_TO_CHARSET.put(JsonEncoding.UTF16_LE,
+				Charset.forName("UTF-16LE"));
+		ENCODING_TO_CHARSET.put(JsonEncoding.UTF32_BE,
+				Charset.forName("UTF-32BE"));
+		ENCODING_TO_CHARSET.put(JsonEncoding.UTF32_LE,
+				Charset.forName("UTF-32LE"));
+
+	}
 	
 	/**
 	 * Create token stream for data source of one of the following types: File, String, byte[], JsonNode.
@@ -122,16 +145,20 @@ public class JsonTokenStream extends JsonParser {
 		if (data instanceof String) {
 			sdata = (String)data;
 			len = sdata.length();
+			encoding = null;
 		} else if (data instanceof File) {
 			fdata = (File)data;
 			len = fdata.length();
+			encoding = detectEncoding(new FileInputStream(fdata));
 		} else if (data instanceof JsonNode) {
 			JsonNode jdata = (JsonNode)data;
 			sdata = UObject.transformJacksonToString(jdata); //TODO should this go to bytes instead?
 			len = sdata.length();
+			encoding = null;
 		} else if (data instanceof byte[]){
 			bdata = (byte[])data;
 			len = bdata.length;
+			encoding = detectEncoding(new ByteArrayInputStream(bdata));
 		} else {
 			throw new IllegalArgumentException(
 					"Only String, File, JsonNode, and byte[]s are allowed as input");
@@ -146,6 +173,22 @@ public class JsonTokenStream extends JsonParser {
 	}
 	
 	
+	private Charset detectEncoding(final InputStream is) throws
+			JsonParseException, IOException {
+		final JsonEncoding enc = new ByteSourceJsonBootstrapper(
+				new IOContext(new BufferRecycler(), is, true), is)
+				.detectEncoding();
+		return ENCODING_TO_CHARSET.get(enc);
+	}
+	
+	/** Get the encoding of the data source, if any.
+	 * @return The data source endoding. Returns null if the data source is a
+	 *  String.
+	 */
+	public Charset getEncoding() {
+		return encoding;
+	}
+
 	/** Specify that this JTS wraps data that is known good JSON. Cannot be
 	 * set as true if the root is not at /, and will be set to false if the
 	 * root is set to a location other than /. 
@@ -1062,19 +1105,38 @@ public class JsonTokenStream extends JsonParser {
 	private void writeObjectContents(final Reader r, final Writer w)
 			throws IOException {
 		r.read(new char[1]); // discard { or [
-		char[] prevbuffer = new char[copyBufferSize];
-		final char[] nextbuffer = new char[copyBufferSize];
-		int prevread = r.read(prevbuffer);
+		char[] prevbuffer = new char[copyBufferSize + 1];
+		char[] nextbuffer = new char[copyBufferSize + 1];
+		int prevread = saferead(r, prevbuffer);
 		while (prevread > -1) {
-			int read = r.read(nextbuffer);
+			int read = saferead(r, nextbuffer);
 			if (read < 0) {
 				w.write(prevbuffer, 0, prevread - 1); // discard { or [
 			} else {
-				w.write(prevbuffer);
+				w.write(prevbuffer, 0, prevread);
 			}
 			prevread = read;
+			final char[] temp = prevbuffer;
 			prevbuffer = nextbuffer;
+			nextbuffer = temp;
 		}
+	}
+	
+	private int saferead(final Reader r, final char[] target) throws
+			IOException{
+		int read = r.read(target, 0, target.length - 1);
+		if (read < 1) {
+			return read;
+		}
+		if (Character.isHighSurrogate(target[read - 1])) {
+			final int tempread = r.read(target, target.length - 1, 1);
+			if (tempread != 1) {
+				throw new IOException(
+						"Read high surrogate character without suceeding low surrogate");
+			}
+			read++;
+		}
+		return read;
 	}
 
 	/**
