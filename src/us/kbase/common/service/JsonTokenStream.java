@@ -3,6 +3,7 @@ package us.kbase.common.service;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -1082,12 +1083,15 @@ public class JsonTokenStream extends JsonParser {
 	private void writeObjectContents(JsonGenerator jgen) throws IOException {
 		final Object os = jgen.getOutputTarget();
 		final Writer w;
-		if (os instanceof Writer) {
+		if (os instanceof BufferedWriter) {
 			w = (Writer) os;
+		} else if (os instanceof Writer) {
+			w = new BufferedWriter((Writer) os);
 		} else if (os instanceof OutputStream) {
 			//could be faster bypassing the writer if the OS is available,
 			//but tricky may need to convert encodings, change BOM, etc.
-			w = new OutputStreamWriter((OutputStream) os, utf8);
+			w = new BufferedWriter(
+					new OutputStreamWriter((OutputStream) os, utf8));
 		} else {
 			throw new IllegalStateException(
 					"Unsupported JsonGenerator target:" + os);
@@ -1105,11 +1109,11 @@ public class JsonTokenStream extends JsonParser {
 	private void writeObjectContents(final Reader r, final Writer w)
 			throws IOException {
 		r.read(new char[1]); // discard { or [
-		char[] prevbuffer = new char[copyBufferSize + 1];
-		char[] nextbuffer = new char[copyBufferSize + 1];
-		int prevread = saferead(r, prevbuffer);
+		char[] prevbuffer = new char[copyBufferSize];
+		char[] nextbuffer = new char[copyBufferSize];
+		int prevread = r.read(prevbuffer);
 		while (prevread > -1) {
-			int read = saferead(r, nextbuffer);
+			int read = r.read(nextbuffer);
 			if (read < 0) {
 				w.write(prevbuffer, 0, prevread - 1); // discard { or [
 			} else {
@@ -1120,23 +1124,6 @@ public class JsonTokenStream extends JsonParser {
 			prevbuffer = nextbuffer;
 			nextbuffer = temp;
 		}
-	}
-	
-	private int saferead(final Reader r, final char[] target) throws
-			IOException{
-		int read = r.read(target, 0, target.length - 1);
-		if (read < 1) {
-			return read;
-		}
-		if (Character.isHighSurrogate(target[read - 1])) {
-			final int tempread = r.read(target, target.length - 1, 1);
-			if (tempread != 1) {
-				throw new IOException(
-						"Read high surrogate character without suceeding low surrogate");
-			}
-			read++;
-		}
-		return read;
 	}
 
 	/**
