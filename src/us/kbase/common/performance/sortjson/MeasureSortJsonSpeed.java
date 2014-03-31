@@ -29,7 +29,6 @@ public class MeasureSortJsonSpeed {
 		int sorts = 5000;
 		boolean pauseForProfiler = false;
 		
-
 		JsonNode jn = new ObjectMapper().readTree(f);
 		byte[] b = new ObjectMapper().writeValueAsBytes(jn);
 		if (pauseForProfiler) {

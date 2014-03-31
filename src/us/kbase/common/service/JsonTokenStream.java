@@ -2,12 +2,12 @@ package us.kbase.common.service;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -22,9 +22,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import us.kbase.common.utils.UTF8Utils;
-import us.kbase.common.utils.UTF8Utils.UTF8CharLocation;
 
 import com.fasterxml.jackson.core.Base64Variant;
 import com.fasterxml.jackson.core.FormatSchema;
@@ -155,7 +152,7 @@ public class JsonTokenStream extends JsonParser {
 	 * 
 	 * The effect of this parameter is that the wrapped data is written
 	 * directly to the output stream or writer, bypassing parsing the JSON
-	 * (and thus checking correctness).
+	 * (and thus checking correctness), for a substantial speed increase.
 	 * @param twj whether this object contains known good JSON.
 	 * @return this JTS
 	 */
@@ -1043,82 +1040,40 @@ public class JsonTokenStream extends JsonParser {
 		final Object os = jgen.getOutputTarget();
 		final Writer w;
 		if (os instanceof Writer) {
-			w = ((Writer) os);
+			w = (Writer) os;
 		} else if (os instanceof OutputStream) {
-			//could be faster bypassing the writer if the OS is available
-			w = new OutputStreamWriter((OutputStream) os);
+			//could be faster bypassing the writer if the OS is available,
+			//but tricky may need to convert encodings, change BOM, etc.
+			w = new OutputStreamWriter((OutputStream) os, utf8);
 		} else {
 			throw new IllegalStateException(
 					"Unsupported JsonGenerator target:" + os);
 		}
 		jgen.flush();
-		if (sdata != null) {
-			final Reader r = createDataReader();
-			try {
-				writeObjectContents(r, w, sdata.length());
-			} finally {
-				r.close();
-			}
-		} else {
-			final long len;
-			final InputStream is;
-			if (bdata != null) {
-				len = bdata.length;
-				is = new ByteArrayInputStream(bdata);
-			} else if (fdata != null) {
-				len = fdata.length();
-				is = new BufferedInputStream(new FileInputStream(fdata));
-			} else {
-				throw new IOException("Data source was not set");
-			}
-			try {
-				writeObjectContents(is, w, len);
-			} finally {
-				is.close();
-			}
+		final Reader r = new BufferedReader(createDataReader());
+		try {
+			writeObjectContents(r, w);
+		} finally {
+			r.close();
 		}
 		w.flush();
 	}
 
-	private void writeObjectContents(final InputStream is, final Writer w,
-			final long contentLength) throws IOException {
-		is.read(new byte[1]); //discard { or [
-		long processed = 1;
-		final byte[] buffer = new byte[copyBufferSize + 3];
-		int read = is.read(buffer, 0, copyBufferSize);
-		while (read > -1) {
-			if (read == copyBufferSize) {
-				final UTF8CharLocation loc = UTF8Utils.getCharBounds(
-						buffer, copyBufferSize - 1);
-				if (loc.getLast() > copyBufferSize - 1) {
-					read += is.read(buffer, copyBufferSize,
-							loc.getLast() - copyBufferSize + 1);
-				}
-			}
-			processed += read;
-			if (processed == contentLength) {
-				w.write(new String(buffer, 0, read - 1, utf8)); //discard } or ]
-			} else {
-				w.write(new String(buffer, 0, read, utf8));
-			}
-			read = is.read(buffer, 0, copyBufferSize);
-		}
-	}
-
-	private void writeObjectContents(final Reader r, final Writer w,
-			final long contentLength) throws IOException {
+	private void writeObjectContents(final Reader r, final Writer w)
+			throws IOException {
 		r.read(new char[1]); // discard { or [
-		long processed = 1;
-		final char[] buffer = new char[copyBufferSize];
-		int read = r.read(buffer);
-		while (read > -1) {
-			processed += read;
-			if (processed == contentLength) {
-				w.write(buffer, 0, read - 1); //discard } or ]
+		char[] prevbuffer = new char[copyBufferSize];
+		final char[] nextbuffer = new char[copyBufferSize];
+		int prevread = r.read(prevbuffer);
+		while (prevread > -1) {
+			int read = r.read(nextbuffer);
+			if (read < 0) {
+				w.write(prevbuffer, 0, prevread - 1); // discard { or [
 			} else {
-				w.write(buffer, 0, read);
+				w.write(prevbuffer);
 			}
-			read = r.read(buffer);
+			prevread = read;
+			prevbuffer = nextbuffer;
 		}
 	}
 
