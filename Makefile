@@ -58,5 +58,8 @@ deploy-scripts:
 deploy-service:
 	@echo "nothing to deploy"
 
+jenkins:
+	$(ANT) jenkins
+
 clean:
 	$(ANT) clean

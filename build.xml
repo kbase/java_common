@@ -7,9 +7,29 @@
   <!-- set global properties for this build -->
   <property name="package" value="KBase common"/>
   <property name="src" location="src"/>
-  <property name="jardir" location="../jars/lib/jars/"/>
   <property name="classes" location="classes"/>
   <property name="docs" location="docs"/>
+
+  <property environment="env"/>
+  <condition property="jardir" value="../jars/lib/jars/">
+    <or>
+      <equals arg1="${env.JENKINS_JARS_MODULE_PATH}" arg2=""/>
+      <not>
+        <isset property="env.JENKINS_JARS_MODULE_PATH"/>
+      </not>
+    </or>
+  </condition>
+  <!-- Properties in ant are immutable, so the following assignment will only take place if jardir was not set above. -->
+  <property name="jardir" location="${env.JENKINS_JARS_MODULE_PATH}/lib/jars/"/>
+
+  <condition property="jarfile" value="${env.JENKINS_JAVA_COMMON_JARFILE}">
+    <and>
+      <isset property="env.JENKINS_JAVA_COMMON_JARFILE"/>
+      <not>
+        <equals arg1="${env.JENKINS_JAVA_COMMON_JARFILE}" arg2=""/>
+      </not>
+    </and>
+  </condition>
 
   <fileset dir="${jardir}" id="lib">
     <include name="apache_commons/commons-lang3-3.1.jar"/>
@@ -39,8 +59,12 @@
     <mkdir dir="${docs}"/>
   </target>
 
-  <target name="compile" depends="init" description="compile the source">
+  <target name="definejarfile" unless="jarfile">
     <fail unless="compile.jarfile" message="property compile.jarfile not set."/>
+    <property name="jarfile" value="${compile.jarfile}"/>
+  </target>
+
+  <target name="compile" depends="init, definejarfile" description="compile the source">
     <!-- Compile class files-->
     <javac destdir="${classes}" includeantruntime="false" target="1.6" source="1.6"
       debug="true" classpathref="compile.classpath">
@@ -53,7 +77,7 @@
       </fileset>
     </copy>
     <!-- Make main jar file-->
-    <jar destfile="${compile.jarfile}" basedir="${classes}"/>
+    <jar destfile="${jarfile}" basedir="${classes}"/>
   </target>
 
   <target name="javadoc" depends="init" description="build javadocs">
@@ -70,11 +94,14 @@
     </javadoc>
   </target>
 
+  <target name="jenkins" depends="compile" description="run tests">
+    <copy file="${jarfile}" todir="${jardir}"/>
+  </target>
+
   <target name="test" depends="compile" description="run tests">
-    <fail unless="compile.jarfile" message="property compile.jarfile not set."/>
     <echo message="starting ${package} tests"/>
     <junit failureproperty="test.failed">
-      <classpath path="${compile.jarfile}"/>
+      <classpath path="${jarfile}"/>
       <classpath refid="compile.classpath"/>
       <formatter type="plain" usefile="false" />
       <test name="us.kbase.common.test.utils.TestStringUtils"/>
