@@ -18,7 +18,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 
 public class RandomGenerationLongTest {
 	
-	public static final boolean PRINT_TIMING = false;
+	public static final boolean PRINT_TIMING = true;	//false;
 	public static final boolean USE_MODEL_DATA = false;
 	
 	@Test
@@ -32,7 +32,7 @@ public class RandomGenerationLongTest {
 		if (PRINT_TIMING) {
 			System.out.println("Test   Size (b) Gen (ms) Jackson (ms) Byte (ms) File (ms) Fast (ms)");
 		}
-		for (int i = 0; i < 300; i++) {
+		for (int i = 0; i < 100; i++) {
 			long timeGener = System.currentTimeMillis();
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			JsonGenerator jgen = new ObjectMapper().getFactory().createGenerator(baos);
@@ -114,7 +114,7 @@ public class RandomGenerationLongTest {
 	
 	private static void generateRandomData(Random r, int[] largeStringCount, int depth, 
 			JsonGenerator out) throws Exception {
-		boolean isPrimitive = depth >=9 || r.nextInt(2) == 0;  // On 10th level we choose only primitives
+		boolean isPrimitive = depth >=4 || r.nextInt(2) == 0;  // On 5th level we choose only primitives
 		if (isPrimitive) {
 			int typeKind = r.nextInt(4);	
 			switch (typeKind) {
@@ -130,7 +130,7 @@ public class RandomGenerationLongTest {
 			break;
 			case 3: {
 				int textLen;
-				if (r.nextInt(10) == 0 && largeStringCount[0] < 5) {
+				if (r.nextInt(10) == 0 && largeStringCount[0] < 2) {
 					textLen = r.nextInt(5000000);	// length of string is from 0 to 5M in 10% of the cases
 					largeStringCount[0]++;
 				} else {
