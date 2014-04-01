@@ -6,7 +6,6 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -15,6 +14,7 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 
 import org.junit.Test;
 
@@ -28,6 +28,28 @@ import us.kbase.common.service.JsonTokenStream;
 public class TestJsonTokenStream {
 	
 	private static final Charset utf8 = Charset.forName("UTF-8");
+	
+	private static final List<Charset> encodings = new LinkedList<Charset>();
+	static {
+		encodings.add(Charset.forName("UTF-8"));
+		encodings.add(Charset.forName("UTF-16BE"));
+		encodings.add(Charset.forName("UTF-16LE"));
+		encodings.add(Charset.forName("UTF-32BE"));
+		encodings.add(Charset.forName("UTF-32LE"));
+	}
+	
+	private static final List<String> basicJsonData = new LinkedList<String>();
+	static {
+		basicJsonData.add("{\"this\":[\"is\",\"a JSON object\"]}");
+		basicJsonData.add("[\"this\",{\"is\":\"a\"},\"JSON object\"]");
+		basicJsonData.add("\"this is a JSON object\"");
+		basicJsonData.add("null");
+		basicJsonData.add("true");
+		basicJsonData.add("false");
+		basicJsonData.add("1");
+		basicJsonData.add("1.2");
+		basicJsonData.add("-1.4E10"); //should really allow e or E
+	}
 	
 	@Test
 	public void getSetTrustedWholeJSON() throws Exception {
@@ -104,32 +126,22 @@ public class TestJsonTokenStream {
 	
 	@Test
 	public void streamingMiddleData() throws Exception {
-		streamDataMidObject("{\"this\":[\"is\",\"a JSON object\"]}");
-		streamDataMidObject("[\"this\",{\"is\":\"a\"},\"JSON object\"]");
-		streamDataMidObject("\"this is a JSON object\"");
-		streamDataMidObject("null");
-		streamDataMidObject("true");
-		streamDataMidObject("false");
-		streamDataMidObject("1");
-		streamDataMidObject("1.2");
-		streamDataMidObject("-1.4E10"); //should really allow e or E
-	}
+		for (String sdata: basicJsonData) {
 
-	private void streamDataMidObject(String sdata)
-			throws Exception, IOException, FileNotFoundException {
-		
-		checkStreamingMidObjCorrectness(sdata, sdata);
-		
-		byte[] bdata = sdata.getBytes(utf8);
-		checkStreamingMidObjCorrectness(sdata, bdata);
-		
-		File f = File.createTempFile("TestJsonTokenStream-", null);
-		f.deleteOnExit();
-		new FileOutputStream(f).write(bdata);
-		checkStreamingMidObjCorrectness(sdata, f);
-		
-		JsonNode jn = new ObjectMapper().readTree(sdata);
-		checkStreamingMidObjCorrectness(sdata, jn);
+			checkStreamingMidObjCorrectness(sdata, sdata);
+			for (Charset enc: encodings) {
+				byte[] bdata = sdata.getBytes(enc);
+				checkStreamingMidObjCorrectness(sdata, bdata);
+
+				File f = File.createTempFile("TestJsonTokenStream-", null);
+				f.deleteOnExit();
+				new FileOutputStream(f).write(bdata);
+				checkStreamingMidObjCorrectness(sdata, f);
+			}
+
+			JsonNode jn = new ObjectMapper().readTree(sdata);
+			checkStreamingMidObjCorrectness(sdata, jn);
+		}
 	}
 
 	private void checkStreamingMidObjCorrectness(String expected, Object data)
@@ -154,9 +166,9 @@ public class TestJsonTokenStream {
 		//test w/ outputstream
 		jts.setRoot(null);
 		target = new ByteArrayOutputStream();
-		target.write("{\"data\":".getBytes());
+		target.write("{\"data\":".getBytes(utf8));
 		jts.writeJson(target);
-		target.write("}".getBytes());
+		target.write("}".getBytes(utf8));
 		res = new String(target.toByteArray(), utf8);
 		assertThat("Correctly streamed in object via OutputStream as " +
 				data.getClass(), res,
@@ -165,7 +177,7 @@ public class TestJsonTokenStream {
 		//test w/ writer
 		jts.setRoot(null);
 		target = new ByteArrayOutputStream();
-		Writer w = new OutputStreamWriter(target);
+		Writer w = new OutputStreamWriter(target, utf8);
 		w.write("{\"data\":");
 		jts.writeJson(w);
 		w.write("}");
@@ -177,7 +189,7 @@ public class TestJsonTokenStream {
 	}
 
 	@Test
-	public void streamingDataWithUTF8LongChars() throws Exception {
+	public void streamingDataWithLongChars() throws Exception {
 		StringBuilder sb = new StringBuilder();
 //		sb.append("[\"");
 		//28 ttl bytes in UTF-8
@@ -194,21 +206,27 @@ public class TestJsonTokenStream {
 //		sb.append("\"]");
 		
 		String exp = "[\"" + sb.toString() + sb.toString() + "\"]";
-		byte[] b = exp.getBytes(utf8);
-		File f = File.createTempFile("TestJsonTokenStream-", null);
-		f.deleteOnExit();
-		new FileOutputStream(f).write(b);
+		for (Charset enc: encodings) {
+			byte[] b = exp.getBytes(enc);
+			File f = File.createTempFile("TestJsonTokenStream-", null);
+			f.deleteOnExit();
+			new FileOutputStream(f).write(b);
+			for (int i = 10; i < 20; i++) {
+				checkStreamingWithLongChars(b, i, exp);
+				checkStreamingWithLongChars(f, i, exp);
+			}
+		}
+		
+		
 		JsonNode jn = new ObjectMapper().readTree(exp);
 		for (int i = 10; i < 20; i++) {
-			checkStreamingWithUTF8(exp, i, exp);
-			checkStreamingWithUTF8(b, i, exp);
-			checkStreamingWithUTF8(f, i, exp);
-			checkStreamingWithUTF8(jn, i, exp);
+			checkStreamingWithLongChars(exp, i, exp);
+			checkStreamingWithLongChars(jn, i, exp);
 		}
 	}
 
 	//data needs to have long char spanning buffersize-th byte for this test
-	private void checkStreamingWithUTF8(Object data, int buffersize, String exp)
+	private void checkStreamingWithLongChars(Object data, int buffersize, String exp)
 			throws JsonParseException, IOException {
 		JsonTokenStream jts = new JsonTokenStream(data).setTrustedWholeJson(true)
 				.setCopyBufferSize(buffersize);
@@ -221,5 +239,16 @@ public class TestJsonTokenStream {
 		assertThat("UTF8 long chars past buffer end processed correctly " +
 				String.format("with data %s and buffersize %s", data, buffersize),
 				res, is(exp));
+	}
+	
+	@Test
+	public void detectEncoding() throws Exception {
+		for (String data: basicJsonData) {
+			for (Charset enc: encodings) {
+				JsonTokenStream jts = new JsonTokenStream(data.getBytes(enc));
+				assertThat("encoding correctly detected", jts.getEncoding(),
+						is(enc));
+			}
+		}
 	}
 }
