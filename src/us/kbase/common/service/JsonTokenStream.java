@@ -346,9 +346,10 @@ public class JsonTokenStream extends JsonParser {
 		if (sdata != null) {
 			r = new StringReader(sdata);
 		} else if (bdata != null) {
-			r = new InputStreamReader(new ByteArrayInputStream(bdata), utf8);
+			r = new InputStreamReader(
+					new ByteArrayInputStream(bdata), encoding);
 		} else if (fdata != null) {
-			r = new InputStreamReader(new BufferedInputStream(new FileInputStream(fdata)), utf8);
+			r = new InputStreamReader(new BufferedInputStream(new FileInputStream(fdata)), encoding);
 		} else {
 			throw new IOException("Data source was not set");
 		}
@@ -1099,31 +1100,26 @@ public class JsonTokenStream extends JsonParser {
 		jgen.flush();
 		final Reader r = new BufferedReader(createDataReader());
 		try {
-			writeObjectContents(r, w);
+			r.read(new char[1]); // discard { or [
+			char[] prevbuffer = new char[copyBufferSize];
+			char[] nextbuffer = new char[copyBufferSize];
+			int prevread = r.read(prevbuffer);
+			while (prevread > -1) {
+				final int read = r.read(nextbuffer);
+				if (read < 0) {
+					w.write(prevbuffer, 0, prevread - 1); // discard { or [
+				} else {
+					w.write(prevbuffer, 0, prevread);
+				}
+				prevread = read;
+				final char[] temp = prevbuffer;
+				prevbuffer = nextbuffer;
+				nextbuffer = temp;
+			}
 		} finally {
 			r.close();
 		}
 		w.flush();
-	}
-
-	private void writeObjectContents(final Reader r, final Writer w)
-			throws IOException {
-		r.read(new char[1]); // discard { or [
-		char[] prevbuffer = new char[copyBufferSize];
-		char[] nextbuffer = new char[copyBufferSize];
-		int prevread = r.read(prevbuffer);
-		while (prevread > -1) {
-			int read = r.read(nextbuffer);
-			if (read < 0) {
-				w.write(prevbuffer, 0, prevread - 1); // discard { or [
-			} else {
-				w.write(prevbuffer, 0, prevread);
-			}
-			prevread = read;
-			final char[] temp = prevbuffer;
-			prevbuffer = nextbuffer;
-			nextbuffer = temp;
-		}
 	}
 
 	/**

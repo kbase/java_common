@@ -129,14 +129,15 @@ public class TestJsonTokenStream {
 		for (String sdata: basicJsonData) {
 
 			checkStreamingMidObjCorrectness(sdata, sdata);
+			for (Charset enc: encodings) {
+				byte[] bdata = sdata.getBytes(enc);
+				checkStreamingMidObjCorrectness(sdata, bdata);
 
-			byte[] bdata = sdata.getBytes(utf8);
-			checkStreamingMidObjCorrectness(sdata, bdata);
-
-			File f = File.createTempFile("TestJsonTokenStream-", null);
-			f.deleteOnExit();
-			new FileOutputStream(f).write(bdata);
-			checkStreamingMidObjCorrectness(sdata, f);
+				File f = File.createTempFile("TestJsonTokenStream-", null);
+				f.deleteOnExit();
+				new FileOutputStream(f).write(bdata);
+				checkStreamingMidObjCorrectness(sdata, f);
+			}
 
 			JsonNode jn = new ObjectMapper().readTree(sdata);
 			checkStreamingMidObjCorrectness(sdata, jn);
@@ -188,7 +189,7 @@ public class TestJsonTokenStream {
 	}
 
 	@Test
-	public void streamingDataWithUTF8LongChars() throws Exception {
+	public void streamingDataWithLongChars() throws Exception {
 		StringBuilder sb = new StringBuilder();
 //		sb.append("[\"");
 		//28 ttl bytes in UTF-8
@@ -205,21 +206,27 @@ public class TestJsonTokenStream {
 //		sb.append("\"]");
 		
 		String exp = "[\"" + sb.toString() + sb.toString() + "\"]";
-		byte[] b = exp.getBytes(utf8);
-		File f = File.createTempFile("TestJsonTokenStream-", null);
-		f.deleteOnExit();
-		new FileOutputStream(f).write(b);
+		for (Charset enc: encodings) {
+			byte[] b = exp.getBytes(enc);
+			File f = File.createTempFile("TestJsonTokenStream-", null);
+			f.deleteOnExit();
+			new FileOutputStream(f).write(b);
+			for (int i = 10; i < 20; i++) {
+				checkStreamingWithLongChars(b, i, exp);
+				checkStreamingWithLongChars(f, i, exp);
+			}
+		}
+		
+		
 		JsonNode jn = new ObjectMapper().readTree(exp);
 		for (int i = 10; i < 20; i++) {
-			checkStreamingWithUTF8(exp, i, exp);
-			checkStreamingWithUTF8(b, i, exp);
-			checkStreamingWithUTF8(f, i, exp);
-			checkStreamingWithUTF8(jn, i, exp);
+			checkStreamingWithLongChars(exp, i, exp);
+			checkStreamingWithLongChars(jn, i, exp);
 		}
 	}
 
 	//data needs to have long char spanning buffersize-th byte for this test
-	private void checkStreamingWithUTF8(Object data, int buffersize, String exp)
+	private void checkStreamingWithLongChars(Object data, int buffersize, String exp)
 			throws JsonParseException, IOException {
 		JsonTokenStream jts = new JsonTokenStream(data).setTrustedWholeJson(true)
 				.setCopyBufferSize(buffersize);
