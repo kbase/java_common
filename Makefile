@@ -13,10 +13,10 @@ ifneq ($(ERR), )
 $(error Tags are ambiguous for this commit: $(TAG))
 endif 
 
-COMMON-JAR = $(JAR-PREFIX)-$(TAG).jar
+COMMON-JAR = $(JAR-PREFIX)-$(TAG)
 
 ifeq ($(TAG), )
-COMMON-JAR = $(JAR-PREFIX)-$(EPOCH)-$(GITCOMMIT).jar
+COMMON-JAR = $(JAR-PREFIX)-$(EPOCH)-$(GITCOMMIT)
 endif
 
 # make sure our make test works
