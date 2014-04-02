@@ -219,7 +219,7 @@ public class JsonTokenStream extends JsonParser {
 		return goodWholeJSON;
 	}
 	
-	/** Sets the size of the byte buffer used when copying the data contained
+	/** Sets the size of the buffer used when copying the data contained
 	 * in this JTS directly to an output stream or writer.
 	 * @param size the size of the buffer.
 	 * @return this JTS
@@ -233,7 +233,7 @@ public class JsonTokenStream extends JsonParser {
 		return this;
 	}
 	
-	/** Gets the size of the byte buffer used when copying the data contained
+	/** Gets the size of the buffer used when copying the data contained
 	 * in this JTS directly to an output stream or writer.
 	 * @return the size of the buffer.
 	 */
