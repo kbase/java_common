@@ -79,7 +79,9 @@
       </fileset>
     </copy>
     <!-- Make main jar file-->
-    <jar destfile="${jarfile}" basedir="${classes}"/>
+    <jar destfile="${jarfile}.jar" basedir="${classes}"/>
+    <!-- Make sources jar file-->
+    <jar destfile="${jarfile}-sources.jar" basedir="${src}"/>
   </target>
 
   <target name="javadoc" depends="init" description="build javadocs">
