@@ -118,6 +118,7 @@
       <test name="us.kbase.common.test.utils.TestUTF8Utils" todir="${junitreports}"/>
       <test name="us.kbase.common.test.service.TestJsonTokenStream" todir="${junitreports}"/>
       <test name="us.kbase.common.utils.sortjson.test.RandomGenerationLongTest" todir="${junitreports}"/>
+      <test name="us.kbase.common.service.test.UObjectTest" todir="${junitreports}"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>

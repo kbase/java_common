@@ -39,16 +39,26 @@ public class UObject {
 	}
 	
 	/**
-	 * Creates instance of UObject from File, JsonTokenStream, JsonNode, POJO, Map, List or scalar.
+	 * Creates instance of UObject from File, byte[], char[], JsonTokenStream, JsonNode, POJO, Map, List or scalar.
 	 */
 	public UObject(Object obj) {
-		if (obj instanceof File) {
+		if (obj instanceof File || obj instanceof byte[]) {
 			try {
 				userObj = new JsonTokenStream(obj);
 			} catch (IOException e) {
 				throw new IllegalStateException(e);
 			}
+		} else if (obj instanceof char[]) {
+			try {
+				userObj = new JsonTokenStream(new String((char[])obj));
+			} catch (IOException e) {
+				throw new IllegalStateException(e);
+			}
+		} else if (obj instanceof JsonTokenStream) {
+			userObj = obj;
 		} else {
+			if (obj != null && !getMapper().canSerialize(obj.getClass()))
+				throw new IllegalArgumentException("UObject can not serialize object of this type: " + obj.getClass().getName());
 			userObj = obj;
 		}
 	}
