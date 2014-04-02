@@ -43,6 +43,7 @@ import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.core.io.IOContext;
 import com.fasterxml.jackson.core.json.ByteSourceJsonBootstrapper;
+import com.fasterxml.jackson.core.json.UTF8JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.core.util.BufferRecycler;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -1089,8 +1090,22 @@ public class JsonTokenStream extends JsonParser {
 		} else if (os instanceof Writer) {
 			w = new BufferedWriter((Writer) os);
 		} else if (os instanceof OutputStream) {
-			//could be faster bypassing the writer if the OS is available,
-			//but tricky may need to convert encodings, change BOM, etc.
+			if (!(jgen instanceof UTF8JsonGenerator)) {
+				/* As of Jackson 2.2 only UTF8JG or WriterBasedJG are possible
+				 * There's no way to get the encoding from the JG, so
+				 * need to be sure it really is using UTF-8
+				 * Based on Jackson 2.2, this should never happen
+				 */
+				throw new RuntimeException(
+						"Got an instance of JsonGenerator that is not a " +
+						"UTF8JsonGenerator and wraps an OutputStream. " +
+						"No way to determine encoding to use."); 
+			}
+			/* could be faster bypassing the writer if the OS is available,
+			 * but tricky may need to convert encodings, change BOM, etc.
+			 * Esp if in future more encodings are available for writing
+			 * directly to output streams.
+			 */
 			w = new BufferedWriter(
 					new OutputStreamWriter((OutputStream) os, utf8));
 		} else {
