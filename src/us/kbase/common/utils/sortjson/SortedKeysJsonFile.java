@@ -14,7 +14,8 @@ import java.util.regex.Pattern;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Class sorts map keys in JSON data stored in either in File or in byte array. 
+ * Class sorts map keys in JSON data stored in either in File or in byte array.
+ * Note that the data *MUST* be in UTF-8 - this is assumed by the sorter.
  * Result of sorting is written into external output stream without modification 
  * of original data source. Code is optimized in the way of using as less memory 
  * as possible. The only case of large memory requirement is map with large 
