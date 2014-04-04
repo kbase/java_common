@@ -11,7 +11,7 @@ import org.junit.Test;
 import us.kbase.common.utils.UTF8Utils;
 import us.kbase.common.utils.UTF8Utils.UTF8CharLocation;
 
-public class TestUTF8Utils {
+public class UTF8UtilsTest {
 	
 	@Test
 	public void utf8CharLocation() throws Exception {

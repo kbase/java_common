@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import us.kbase.common.service.JsonTokenStream;
 
-public class TestJsonTokenStream {
+public class JsonTokenStreamTest {
 	
 	private static final Charset utf8 = Charset.forName("UTF-8");
 	

@@ -6,7 +6,7 @@ import static org.junit.Assert.assertThat;
 import org.junit.Test;
 import us.kbase.common.utils.StringUtils;
 
-public class TestStringUtils {
+public class StringUtilsTest {
 
 	//TODO tests for the entire repo, although these are tested via integration tests
 	
