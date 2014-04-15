@@ -11,6 +11,7 @@ import java.util.Scanner;
 import org.nocrala.tools.texttablefmt.Table;
 
 import us.kbase.common.performance.PerformanceMeasurement;
+import us.kbase.common.utils.sortjson.SortedKeysJsonBytes;
 import us.kbase.common.utils.sortjson.SortedKeysJsonFile;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -38,9 +39,10 @@ public class MeasureSortJsonSpeed {
 		}
 		System.out.println("Starting tests");
 		PerformanceMeasurement js = measureJsonSort(b, sorts);
-		PerformanceMeasurement skfj = measureSKJFSort(b, sorts);
+		PerformanceMeasurement skjf = measureSKJFSort(b, sorts);
+		PerformanceMeasurement skjb = measureSKJBSort(b, sorts);
 //		PerformanceMeasurement skfjs = measureSKJFSortStringKeys(b, sorts);
-		renderResults(Arrays.asList(js, skfj));//, skfjs));
+		renderResults(Arrays.asList(js, skjb, skjf));//, skfjs));
 		
 	}
 	
@@ -87,6 +89,20 @@ public class MeasureSortJsonSpeed {
 			m.add(System.nanoTime() - start);
 		}
 		return new PerformanceMeasurement(m, "SortedKeysJsonFile JSON sort");
+	}
+	
+	private static PerformanceMeasurement measureSKJBSort(byte[] b, int sorts)
+			throws Exception {
+		List<Long> m = new LinkedList<Long>();
+		for (int i = 0; i < sorts; i++) {
+			long start = System.nanoTime();
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			new SortedKeysJsonBytes(b).writeIntoStream(baos);
+			@SuppressWarnings("unused")
+			byte[] t = baos.toByteArray();
+			m.add(System.nanoTime() - start);
+		}
+		return new PerformanceMeasurement(m, "SortedKeysJsonBytes JSON sort");
 	}
 
 	@SuppressWarnings("unused")
