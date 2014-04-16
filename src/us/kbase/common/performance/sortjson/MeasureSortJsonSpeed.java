@@ -51,17 +51,17 @@ public class MeasureSortJsonSpeed {
 		}
 		System.out.println("Starting tests");
 		
-		RecordMem memjs = new RecordMem(100, "Jackson");
-		System.gc();
-		Thread.sleep(1000);
-		PerformanceMeasurement js = measureJsonSort(b, sorts);
-		memjs.stop();
-//		
-//		RecordMem memskjb = new RecordMem(100, "SortedJsonBytes");
+//		RecordMem memjs = new RecordMem(100, "Jackson");
 //		System.gc();
 //		Thread.sleep(1000);
-//		PerformanceMeasurement skjb = measureSKJBSort(b, sorts);
-//		memskjb.stop();
+//		PerformanceMeasurement js = measureJsonSort(b, sorts);
+//		memjs.stop();
+//		
+		RecordMem memskjb = new RecordMem(100, "SortedJsonBytes");
+		System.gc();
+		Thread.sleep(1000);
+		PerformanceMeasurement skjb = measureSKJBSort(b, sorts);
+		memskjb.stop();
 
 //		RecordMem memskjfb = new RecordMem(100, "SortedJsonFile - bytes");
 //		System.gc();
@@ -78,9 +78,9 @@ public class MeasureSortJsonSpeed {
 //		
 //		
 ////		PerformanceMeasurement skfjs = measureSKJFSortStringKeys(b, sorts);
-//		renderResults(Arrays.asList(js, skjb, skjfb, skjff));//, skfjs));
+//		renderResults(Arrays.asList(js, skjb));//, skjfb, skjff));//, skfjs));
 		
-		printMemoryHistory(memjs);//, memskjb, memskjfb, memskjff);
+		printMemoryHistory(memskjb);//, memskjb, memskjfb, memskjff);
 	}
 	
 	private static void printMemoryHistory(RecordMem... mems) {

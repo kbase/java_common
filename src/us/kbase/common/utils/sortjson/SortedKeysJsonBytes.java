@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class SortedKeysJsonBytes {
 	private byte[] data;
 	private boolean skipKeyDuplication = false;
+	private static final int DEFAULT_LIST_INIT_SIZE = 4;
 
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -135,7 +136,8 @@ public class SortedKeysJsonBytes {
 	
 	private JsonMapElement searchForMapCloseBracket(int[] pos, List<Object> path) 
 			throws IOException, KeyDuplicationException {
-		List<KeyValueLocation> ret = new ArrayList<KeyValueLocation>();
+		List<KeyValueLocation> ret =
+				new ArrayList<KeyValueLocation>(DEFAULT_LIST_INIT_SIZE);
 		boolean isBeforeField = true;
 		String currentKey = null;
 		int currentKeyStart = -1;
@@ -206,7 +208,8 @@ public class SortedKeysJsonBytes {
 
 	private JsonArrayElement searchForArrayCloseBracket(int[] pos, List<Object> path) 
 			throws IOException, KeyDuplicationException {
-		List<JsonElement> items = new ArrayList<JsonElement>();
+		List<JsonElement> items =
+				new ArrayList<JsonElement>(DEFAULT_LIST_INIT_SIZE);
 		if (pos[0] >= data.length)
 			throw new IOException("Array close bracket wasn't found");
 		int b = data[pos[0]++] & 0xff;
