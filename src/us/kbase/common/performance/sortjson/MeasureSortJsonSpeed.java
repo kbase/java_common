@@ -34,7 +34,7 @@ public class MeasureSortJsonSpeed {
 	public static void main(String[] args) throws Exception {
 		File f = new File("src/us/kbase/common/performance/sortjson/83333.2.txt");
 		int sorts = 500;
-		boolean pauseForProfiler = false;
+		boolean pauseForProfiler = true;
 		
 		JsonNode jn = new ObjectMapper().readTree(f);
 		byte[] b = new ObjectMapper().writeValueAsBytes(jn);

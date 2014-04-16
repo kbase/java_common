@@ -241,29 +241,21 @@ public class SortedKeysJsonBytes {
 	}
 
 	private String searchForEndQuot(int[] pos, boolean createString) throws IOException {
-		ByteArrayOutputStream ret = null;
-		if (createString) {
-			ret = new ByteArrayOutputStream();
-			ret.write('"');
-		}
+		int start = pos[0] - 1;
 		while (true) {
 			if (pos[0] >= data.length)
-				throw new IOException("String close quot wasn't found");
+				throw new IOException("String close quote wasn't found");
 			int b = data[pos[0]++] & 0xff;
-			if (createString)
-				ret.write(b);
 			if (b == '"')
 				break;
 			if (b == '\\') {
 				if (pos[0] >= data.length)
-					throw new IOException("String close quot wasn't found");
+					throw new IOException("String close quote wasn't found");
 				b = data[pos[0]++] & 0xff;
-				if (createString)
-					ret.write(b);
 			}
 		}
 		if (createString)
-			return MAPPER.readValue(ret.toByteArray(), String.class);
+			return MAPPER.readValue(data, start, pos[0], String.class);
 		return null;
 	}
 
