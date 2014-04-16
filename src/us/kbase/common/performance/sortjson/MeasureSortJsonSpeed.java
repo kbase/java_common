@@ -17,6 +17,7 @@ import us.kbase.common.performance.PerformanceMeasurement;
 import us.kbase.common.utils.sortjson.SortedKeysJsonBytes;
 import us.kbase.common.utils.sortjson.SortedKeysJsonFile;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -26,11 +27,13 @@ public class MeasureSortJsonSpeed {
 	private static final ObjectMapper SORT_MAPPER = new ObjectMapper();
 	static {
 		SORT_MAPPER.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+		//Jackson 2.3 + only, comment out for 2.2 or <
+//		SORT_MAPPER.configure(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY, true); 
 	}
 
 	public static void main(String[] args) throws Exception {
 		File f = new File("src/us/kbase/common/performance/sortjson/83333.2.txt");
-		int sorts = 5000;
+		int sorts = 500;
 		boolean pauseForProfiler = false;
 		
 		JsonNode jn = new ObjectMapper().readTree(f);
@@ -48,36 +51,36 @@ public class MeasureSortJsonSpeed {
 		}
 		System.out.println("Starting tests");
 		
-//		RecordMem memjs = new RecordMem(100, "Jackson");
-//		System.gc();
-//		Thread.sleep(1000);
+		RecordMem memjs = new RecordMem(100, "Jackson");
+		System.gc();
+		Thread.sleep(1000);
 		PerformanceMeasurement js = measureJsonSort(b, sorts);
-//		memjs.stop();
+		memjs.stop();
 //		
 //		RecordMem memskjb = new RecordMem(100, "SortedJsonBytes");
 //		System.gc();
 //		Thread.sleep(1000);
-		PerformanceMeasurement skjb = measureSKJBSort(b, sorts);
+//		PerformanceMeasurement skjb = measureSKJBSort(b, sorts);
 //		memskjb.stop();
 
 //		RecordMem memskjfb = new RecordMem(100, "SortedJsonFile - bytes");
 //		System.gc();
 //		Thread.sleep(1000);
-		PerformanceMeasurement skjfb = measureSKJFSort(b, sorts);
+//		PerformanceMeasurement skjfb = measureSKJFSort(b, sorts);
 //		memskjfb.stop();
 //		
 //		b = null;
 //		RecordMem memskjff = new RecordMem(100, "SortedJsonFile - file");
 //		System.gc();
 //		Thread.sleep(1000);
-		PerformanceMeasurement skjff = measureSKJFSort(temp, sorts);
+//		PerformanceMeasurement skjff = measureSKJFSort(temp, sorts);
 //		memskjff.stop();
 //		
 //		
 ////		PerformanceMeasurement skfjs = measureSKJFSortStringKeys(b, sorts);
-		renderResults(Arrays.asList(js, skjb, skjfb, skjff));//, skfjs));
+//		renderResults(Arrays.asList(js, skjb, skjfb, skjff));//, skfjs));
 		
-//		printMemoryHistory(memskjfb);//, memskjb, memskjfb, memskjff);
+		printMemoryHistory(memjs);//, memskjb, memskjfb, memskjff);
 	}
 	
 	private static void printMemoryHistory(RecordMem... mems) {
@@ -227,8 +230,10 @@ public class MeasureSortJsonSpeed {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
 			long start = System.nanoTime();
+			JsonNode jn = SORT_MAPPER.readTree(b); //detects duplicate keys with Jackson 2.3+
 			@SuppressWarnings("unchecked")
-			Map<String, Object> d = SORT_MAPPER.readValue(b, Map.class);
+			Map<String, Object> d = SORT_MAPPER.treeToValue(jn, Map.class);
+			jn = null;
 			byte[] t = SORT_MAPPER.writeValueAsBytes(d);
 			m.add(System.nanoTime() - start);
 		}
