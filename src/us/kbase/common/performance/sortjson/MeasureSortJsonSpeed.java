@@ -1,11 +1,13 @@
 package us.kbase.common.performance.sortjson;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
+/** expects a JSON file with no whitespace for testing */
 public class MeasureSortJsonSpeed {
 	
 	private static final ObjectMapper SORT_MAPPER = new ObjectMapper();
@@ -31,20 +34,18 @@ public class MeasureSortJsonSpeed {
 //		SORT_MAPPER.configure(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY, true); 
 	}
 
+	final static boolean PAUSE_FOR_PROFILER = false;
+	final static int NUM_SORTS = 5000;
+	final static File FILE = new File("src/us/kbase/common/performance/sortjson/83333.2.txt");
+	
 	public static void main(String[] args) throws Exception {
-		File f = new File("src/us/kbase/common/performance/sortjson/83333.2.txt");
-		int sorts = 500;
-		boolean pauseForProfiler = true;
+		System.out.println("started: " + new Date());
+		System.out.println("max mem: " + Runtime.getRuntime().maxMemory());
+		System.out.println("file: " + FILE);
 		
-		JsonNode jn = new ObjectMapper().readTree(f);
-		byte[] b = new ObjectMapper().writeValueAsBytes(jn);
-		jn = null;
-		File temp = File.createTempFile("tempMeasureSort", null);
-		temp.deleteOnExit();
-		FileOutputStream os = new FileOutputStream(temp);
-		os.write(b);
-		os = null;
-		if (pauseForProfiler) {
+		System.out.println("size: " + FILE.length());
+		byte[] b = Files.readAllBytes(FILE.toPath());
+		if (PAUSE_FOR_PROFILER) {
 			System.out.println("File read into bytes[]. Start profiler, then hit enter to continue");
 			Scanner s = new Scanner(System.in);
 			s.nextLine();
@@ -54,33 +55,34 @@ public class MeasureSortJsonSpeed {
 //		RecordMem memjs = new RecordMem(100, "Jackson");
 //		System.gc();
 //		Thread.sleep(1000);
-//		PerformanceMeasurement js = measureJsonSort(b, sorts);
+		PerformanceMeasurement js = measureJsonSort(b, NUM_SORTS);
 //		memjs.stop();
 //		
-		RecordMem memskjb = new RecordMem(100, "SortedJsonBytes");
-		System.gc();
-		Thread.sleep(1000);
-		PerformanceMeasurement skjb = measureSKJBSort(b, sorts);
-		memskjb.stop();
+//		RecordMem memskjb = new RecordMem(100, "SortedJsonBytes");
+//		System.gc();
+//		Thread.sleep(1000);
+		PerformanceMeasurement skjb = measureSKJBSort(b, NUM_SORTS);
+//		memskjb.stop();
 
 //		RecordMem memskjfb = new RecordMem(100, "SortedJsonFile - bytes");
 //		System.gc();
 //		Thread.sleep(1000);
-//		PerformanceMeasurement skjfb = measureSKJFSort(b, sorts);
+		PerformanceMeasurement skjfb = measureSKJFSort(b, NUM_SORTS);
 //		memskjfb.stop();
 //		
-//		b = null;
+		b = null;
 //		RecordMem memskjff = new RecordMem(100, "SortedJsonFile - file");
 //		System.gc();
 //		Thread.sleep(1000);
-//		PerformanceMeasurement skjff = measureSKJFSort(temp, sorts);
+		PerformanceMeasurement skjff = measureSKJFSort(FILE, NUM_SORTS);
 //		memskjff.stop();
 //		
 //		
+		System.out.println("Complete: " + new Date());
 ////		PerformanceMeasurement skfjs = measureSKJFSortStringKeys(b, sorts);
-//		renderResults(Arrays.asList(js, skjb));//, skjfb, skjff));//, skfjs));
+		renderResults(Arrays.asList(js, skjb, skjfb, skjff));//, skfjs));
 		
-		printMemoryHistory(memskjb);//, memskjb, memskjfb, memskjff);
+//		printMemoryHistory(memjs);//, memskjb, memskjfb, memskjff);
 	}
 	
 	private static void printMemoryHistory(RecordMem... mems) {
@@ -172,11 +174,8 @@ public class MeasureSortJsonSpeed {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
 			long start = System.nanoTime();
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			new SortedKeysJsonFile(b).setUseStringsForKeyStoring(true)
-					.writeIntoStream(baos);
-			@SuppressWarnings("unused")
-			byte[] t = baos.toByteArray();
+					.writeIntoStream(new NullOutputStream());
 			m.add(System.nanoTime() - start);
 		}
 		return new PerformanceMeasurement(m, "SortedKeysJsonFile JSON sort with String keys");
@@ -187,24 +186,25 @@ public class MeasureSortJsonSpeed {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
 			long start = System.nanoTime();
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			new SortedKeysJsonFile(b).writeIntoStream(baos);
-			@SuppressWarnings("unused")
-			byte[] t = baos.toByteArray();
+			new SortedKeysJsonFile(b).writeIntoStream(new NullOutputStream());
 			m.add(System.nanoTime() - start);
 		}
 		return new PerformanceMeasurement(m, "SortedKeysJsonFile JSON byte sort");
 	}
-	
+
+	/**Writes to nowhere*/
+	static class NullOutputStream extends OutputStream {
+		@Override
+		public void write(int b) throws IOException {
+		}
+	}
+
 	private static PerformanceMeasurement measureSKJFSort(File temp, int sorts)
 			throws Exception {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
 			long start = System.nanoTime();
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			new SortedKeysJsonFile(temp).writeIntoStream(baos);
-			@SuppressWarnings("unused")
-			byte[] t = baos.toByteArray();
+			new SortedKeysJsonFile(temp).writeIntoStream(new NullOutputStream());
 			m.add(System.nanoTime() - start);
 		}
 		return new PerformanceMeasurement(m, "SortedKeysJsonFile JSON file sort");
@@ -215,10 +215,7 @@ public class MeasureSortJsonSpeed {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
 			long start = System.nanoTime();
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			new SortedKeysJsonBytes(b).writeIntoStream(baos);
-			@SuppressWarnings("unused")
-			byte[] t = baos.toByteArray();
+			new SortedKeysJsonBytes(b).writeIntoStream(new NullOutputStream());
 			m.add(System.nanoTime() - start);
 		}
 		return new PerformanceMeasurement(m, "SortedKeysJsonBytes JSON sort");
@@ -234,7 +231,7 @@ public class MeasureSortJsonSpeed {
 			@SuppressWarnings("unchecked")
 			Map<String, Object> d = SORT_MAPPER.treeToValue(jn, Map.class);
 			jn = null;
-			byte[] t = SORT_MAPPER.writeValueAsBytes(d);
+			SORT_MAPPER.writeValue(new NullOutputStream(), d);
 			m.add(System.nanoTime() - start);
 		}
 		return new PerformanceMeasurement(m, "ObjectMapper JSON sort");
