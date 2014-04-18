@@ -1,12 +1,10 @@
 package us.kbase.common.performance.sortjson;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 
@@ -31,8 +29,16 @@ public class MeasureSortRunner {
 		JARS.add("../jars/lib/jars/jackson/jackson-core-2.2.3.jar");
 		JARS.add("../jars/lib/jars/jackson/jackson-databind-2.2.3.jar");
 	}
-	
 	final static String CODE_ROOT = "src";
+	final static String CLASSPATH;
+	static {
+		String classpath = CODE_ROOT;
+		for (String j: JARS) {
+			classpath += ":" + j;
+		}
+		CLASSPATH = classpath;
+	}
+	
 	final static String MEAS_CLASS_FILE =
 			"us.kbase.common.performance.sortjson.MeasureSortJsonMem";
 	
@@ -40,28 +46,52 @@ public class MeasureSortRunner {
 			CODE_ROOT + "/" + MEAS_CLASS_FILE.replace(".", "/");
 	
 	public static void main(String[] args) throws Exception {
-		String classpath = CODE_ROOT;
-		for (String j: JARS) {
-			classpath += ":" + j;
+		
+		
+		compileMeasureSort();
+		
+		int numSorts = NUM_SORTS;
+		int interval = TIME_INTERVAL;
+		String file = FILE;
+		
+		List<List<Double>> mems = new ArrayList<List<Double>>();
+		for (String sorter: SORTERS) {
+			System.out.println("Running sorter: " + sorter);
+			mems.add(runMeasureSort(numSorts, interval, file, sorter));
 		}
-		
-		compileMeasureSort(classpath);
-		
-		Process p = Runtime.getRuntime().exec(new String [] {
-				"java", "-cp", classpath, MEAS_CLASS_FILE,
-				Integer.toString(NUM_SORTS), Integer.toString(TIME_INTERVAL), FILE, SORTER
-		});
-		p.waitFor();
-		System.out.println("STDOUT:");
-		print(p.getInputStream());
-		System.out.println("STDERR:");
-		print(p.getErrorStream());
+		System.out.print(mems);
 	}
 
-	private static void compileMeasureSort(String classpath)
+	private static List<Double> runMeasureSort(int numSorts,
+			int interval, String file, String sorter) throws IOException,
+			InterruptedException {
+		Process p = Runtime.getRuntime().exec(new String [] {
+				"java", "-cp", CLASSPATH, MEAS_CLASS_FILE,
+				Integer.toString(numSorts), Integer.toString(interval), file, sorter
+		});
+		List<Double> mem = new ArrayList<Double>();
+		BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+		while (true) {
+			String l = br.readLine();
+			if (l == null) break;
+			mem.add(Double.parseDouble(l));
+		}
+		p.waitFor();
+		if (p.exitValue() != 0) {
+			System.out.println("Run failed with exit value " + p.exitValue());
+			System.out.println("STDOUT:");
+			print(p.getInputStream());
+			System.out.println("STDERR:");
+			print(p.getErrorStream());
+			System.exit(1);
+		}
+		return mem;
+	}
+
+	private static void compileMeasureSort()
 			throws IOException, InterruptedException {
 		Process p = Runtime.getRuntime().exec(new String[] {
-				"javac", "-cp", classpath, MEAS_JAVA_FILE + ".java"});
+				"javac", "-cp", CLASSPATH, MEAS_JAVA_FILE + ".java"});
 		p.waitFor();
 		
 		if (p.exitValue() != 0) {
