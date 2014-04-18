@@ -2,12 +2,14 @@ package us.kbase.common.performance.sortjson;
 
 import java.awt.Color;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,12 +20,9 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.LegendItem;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.ValueAxis;
-import org.jfree.chart.block.Block;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.title.LegendTitle;
-import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.ui.ApplicationFrame;
@@ -37,7 +36,6 @@ public class MeasureSortRunner {
 	final static int NUM_SORTS = 500;
 	final static int TIME_INTERVAL = 100; //ms
 	final static String FILE = "src/us/kbase/common/performance/sortjson/83333.2.txt";
-	final static String SORTER = "SortedJsonBytes";
 	
 	final static List<String> SORTERS = new ArrayList<String>();
 	static {
@@ -77,15 +75,19 @@ public class MeasureSortRunner {
 		int numSorts = NUM_SORTS;
 		int interval = TIME_INTERVAL;
 		String file = FILE;
+		String title = "Title";//TODO info
 		
-		Map<String, List<Double>> mems = new HashMap<String, List<Double>>();
+		Map<String, List<Double>> mems = new LinkedHashMap<String, List<Double>>();
 		for (String sorter: SORTERS) {
 			System.out.println("Running sorter: " + sorter);
 			mems.put(sorter, runMeasureSort(numSorts, interval, file, sorter));
 		}
 		
-		String title = "Title";//TODO info
-		final JFreeChart chart = saveChart(new File("output.png"), mems, title);
+		String params = String.format(
+				"Sorts: %s, Interval (ms): %s, file: %s, size (MB): %,.2f",
+				numSorts, interval, file, new File(file).length() / 1000000.0);
+		final JFreeChart chart = saveChart(new File("output.png"), mems, title, params);
+		saveData(new File("output.txt"), mems, title, params);
 
 		
 
@@ -95,8 +97,24 @@ public class MeasureSortRunner {
 		demo.setVisible(true);
 	}
 
+	private static void saveData(File file, Map<String, List<Double>> mems,
+			String title, String params) throws IOException {
+		BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+		bw.write(title + "\n");
+		bw.write(params + "\n");
+		for (String s: mems.keySet()) {
+			bw.write(s + "\n");
+			for (Double m: mems.get(s)) {
+				bw.write(Double.toString(m) + "\n");
+			}
+			bw.write("\n");
+		}
+		bw.flush();
+		bw.close();
+	}
+
 	private static JFreeChart saveChart(File f, Map<String, List<Double>> mems,
-			String title) throws IOException {
+			String title, String params) throws IOException {
 		XYSeriesCollection xyc = new XYSeriesCollection();
 		for (String sorter: SORTERS) {
 			XYSeries s = new XYSeries(sorter, false, false);
@@ -108,13 +126,13 @@ public class MeasureSortRunner {
 		}
 		
 		final JFreeChart chart = ChartFactory.createXYLineChart(
-				title, 
+				title + "\n" + params, 
 				"Measurement #",
 				"Used Memory (MB)",
 				xyc,
 				PlotOrientation.VERTICAL,
 				true, // include legend
-				true, // tooltips
+				false, // tooltips
 				false // urls
 				);
 		
