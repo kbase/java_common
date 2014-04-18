@@ -4,9 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -52,103 +50,19 @@ public class MeasureSortJsonSpeed {
 		}
 		System.out.println("Starting tests");
 		
-//		RecordMem memjs = new RecordMem(100, "Jackson");
-//		Thread.sleep(1000);
 		PerformanceMeasurement js = measureJsonSort(b, NUM_SORTS);
-//		memjs.stop();
-//		
-//		RecordMem memskjb = new RecordMem(100, "SortedJsonBytes");
-//		Thread.sleep(1000);
-		PerformanceMeasurement skjb = measureSKJBSort(b, NUM_SORTS);
-//		memskjb.stop();
 
-//		RecordMem memskjfb = new RecordMem(100, "SortedJsonFile - bytes");
-//		Thread.sleep(1000);
+		PerformanceMeasurement skjb = measureSKJBSort(b, NUM_SORTS);
+
 		PerformanceMeasurement skjfb = measureSKJFSort(b, NUM_SORTS);
-//		memskjfb.stop();
-//		
+
 		b = null;
-//		RecordMem memskjff = new RecordMem(100, "SortedJsonFile - file");
-//		Thread.sleep(1000);
 		PerformanceMeasurement skjff = measureSKJFSort(FILE, NUM_SORTS);
-//		memskjff.stop();
-//		
-//		
+
 		System.out.println("Complete: " + new Date());
-////		PerformanceMeasurement skfjs = measureSKJFSortStringKeys(b, sorts);
-		renderResults(Arrays.asList(js, skjb, skjfb, skjff));//, skfjs));
-		
-//		printMemoryHistory(memjs);//, memskjb, memskjfb, memskjff);
+		renderResults(Arrays.asList(js, skjb, skjfb, skjff));
 	}
 	
-	private static void printMemoryHistory(RecordMem... mems) {
-		List<Integer> lens = new LinkedList<Integer>();
-		for (int i = 0; i < mems.length; i++) {
-			lens.add(mems[i].getUsedMemOverTime().size());
-			System.out.print(mems[i].getName() + "\t");
-		}
-		System.out.println();
-		int maxlen = Collections.max(lens);
-		for (int c = 0; c < maxlen; c++) {
-			for (int i = 0; i < mems.length; i++) {
-				if (mems[i].getUsedMemOverTime().size() > c) {
-					System.out.print(mems[i].getUsedMemOverTime().get(c) / 1000000.0);
-				}
-				System.out.print("\t");
-			}
-			System.out.println();
-			
-		}
-	}
-
-	private static class RecordMem {
-		
-		private final Thread t;
-		private final List<Long> freeMemList;
-		private volatile boolean stop = false;
-		private final String name;
-		
-		public RecordMem(final int intervalMS, String name) {
-			this.name = name;
-			freeMemList = new ArrayList<Long>();
-			t = new Thread(new Runnable() {
-				@Override
-				public void run() {
-					Runtime r = Runtime.getRuntime();
-					while (true) {
-						if (stop)
-							break;
-						System.gc();
-						freeMemList.add(r.totalMemory() - r.freeMemory());
-						try {
-							Thread.sleep(intervalMS);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
-				}
-			});
-			t.start();
-		}
-		
-		public String getName() {
-			return name;
-		}
-		
-		public void stop() {
-			stop = true;
-			try {
-				t.join();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-		
-		public List<Long> getUsedMemOverTime() {
-			return freeMemList;
-		}
-	}
-
 	private static void renderResults(List<PerformanceMeasurement> pms) {
 		final int width = 4;
 		Table tbl = new Table(width);
@@ -217,7 +131,6 @@ public class MeasureSortJsonSpeed {
 		return new PerformanceMeasurement(m, "SortedKeysJsonBytes JSON sort");
 	}
 
-	@SuppressWarnings("unused")
 	private static PerformanceMeasurement measureJsonSort(byte[] b, int sorts)
 			throws Exception {
 		List<Long> m = new LinkedList<Long>();
