@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartPanel;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.LegendItem;
@@ -25,13 +24,9 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.title.LegendTitle;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-import org.jfree.ui.ApplicationFrame;
-import org.jfree.ui.RefineryUtilities;
 
 
 public class MeasureSortRunner {
-	
-	final static boolean HEADLESS = true;
 	
 	final static int NUM_SORTS = 500;
 	final static int TIME_INTERVAL = 100; //ms
@@ -69,32 +64,35 @@ public class MeasureSortRunner {
 	
 	public static void main(String[] args) throws Exception {
 		
-		
+		System.setProperty("java.awt.headless", "true");
 		compileMeasureSort();
 		
 		int numSorts = NUM_SORTS;
 		int interval = TIME_INTERVAL;
-		String file = FILE;
-		String title = "Title";//TODO info
+		File file = new File(FILE);
+		String title = "Title";
+		String outputPrefix = "output";
+		
+		System.out.println("Recording memory usage");
+		measureSorterMemUsage(numSorts, interval, file, title, outputPrefix);
+	}
+
+	private static void measureSorterMemUsage(int numSorts, int interval,
+			File input, String title, String outputPrefix)
+			throws IOException, InterruptedException {
 		
 		Map<String, List<Double>> mems = new LinkedHashMap<String, List<Double>>();
 		for (String sorter: SORTERS) {
 			System.out.println("Running sorter: " + sorter);
-			mems.put(sorter, runMeasureSort(numSorts, interval, file, sorter));
+			mems.put(sorter, runMeasureSort(numSorts, interval, input, sorter));
 		}
 		
 		String params = String.format(
 				"Sorts: %s, Interval (ms): %s, file: %s, size (MB): %,.2f",
-				numSorts, interval, file, new File(file).length() / 1000000.0);
-		final JFreeChart chart = saveChart(new File("output.png"), mems, title, params);
-		saveData(new File("output.txt"), mems, title, params);
-
+				numSorts, interval, input, input.length() / 1000000.0);
 		
-
-		final FooFrame demo = new FooFrame("Title", chart);
-		demo.pack();
-		RefineryUtilities.centerFrameOnScreen(demo);
-		demo.setVisible(true);
+		saveChart(new File(outputPrefix + ".png"), mems, title, params);
+		saveData(new File(outputPrefix + ".txt"), mems, title, params);
 	}
 
 	private static void saveData(File file, Map<String, List<Double>> mems,
@@ -155,22 +153,12 @@ public class MeasureSortRunner {
 		return chart;
 	}
 	
-	private static class FooFrame extends ApplicationFrame {
-		
-		FooFrame(String title, JFreeChart chart) {
-			super(title);
-			final ChartPanel chartPanel = new ChartPanel(chart);
-//			chartPanel.setPreferredSize(new java.awt.Dimension(500, 270));
-			setContentPane(chartPanel);
-		}
-	}
-
 	private static List<Double> runMeasureSort(int numSorts,
-			int interval, String file, String sorter) throws IOException,
+			int interval, File file, String sorter) throws IOException,
 			InterruptedException {
 		Process p = Runtime.getRuntime().exec(new String [] {
 				"java", "-cp", CLASSPATH, MEAS_CLASS_FILE,
-				Integer.toString(numSorts), Integer.toString(interval), file, sorter
+				Integer.toString(numSorts), Integer.toString(interval), file.toString(), sorter
 		});
 		List<Double> mem = new ArrayList<Double>();
 		BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
@@ -179,15 +167,7 @@ public class MeasureSortRunner {
 			if (l == null) break;
 			mem.add(Double.parseDouble(l));
 		}
-		p.waitFor();
-		if (p.exitValue() != 0) {
-			System.out.println("Run failed with exit value " + p.exitValue());
-			System.out.println("STDOUT:");
-			print(p.getInputStream());
-			System.out.println("STDERR:");
-			print(p.getErrorStream());
-			System.exit(1);
-		}
+		finish(p, "Run failed");
 		return mem;
 	}
 
@@ -195,10 +175,14 @@ public class MeasureSortRunner {
 			throws IOException, InterruptedException {
 		Process p = Runtime.getRuntime().exec(new String[] {
 				"javac", "-cp", CLASSPATH, MEAS_JAVA_FILE + ".java"});
+		finish(p, "Compile failed");
+	}
+
+	private static void finish(Process p, String err)
+			throws InterruptedException, IOException {
 		p.waitFor();
-		
 		if (p.exitValue() != 0) {
-			System.out.println("Compile failed with exit value " + p.exitValue());
+			System.out.println(err + ". Exit value " + p.exitValue());
 			System.out.println("STDOUT:");
 			print(p.getInputStream());
 			System.out.println("STDERR:");
