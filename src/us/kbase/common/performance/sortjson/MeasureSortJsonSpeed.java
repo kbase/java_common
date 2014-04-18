@@ -53,26 +53,22 @@ public class MeasureSortJsonSpeed {
 		System.out.println("Starting tests");
 		
 //		RecordMem memjs = new RecordMem(100, "Jackson");
-//		System.gc();
 //		Thread.sleep(1000);
 		PerformanceMeasurement js = measureJsonSort(b, NUM_SORTS);
 //		memjs.stop();
 //		
 //		RecordMem memskjb = new RecordMem(100, "SortedJsonBytes");
-//		System.gc();
 //		Thread.sleep(1000);
 		PerformanceMeasurement skjb = measureSKJBSort(b, NUM_SORTS);
 //		memskjb.stop();
 
 //		RecordMem memskjfb = new RecordMem(100, "SortedJsonFile - bytes");
-//		System.gc();
 //		Thread.sleep(1000);
 		PerformanceMeasurement skjfb = measureSKJFSort(b, NUM_SORTS);
 //		memskjfb.stop();
 //		
 		b = null;
 //		RecordMem memskjff = new RecordMem(100, "SortedJsonFile - file");
-//		System.gc();
 //		Thread.sleep(1000);
 		PerformanceMeasurement skjff = measureSKJFSort(FILE, NUM_SORTS);
 //		memskjff.stop();
