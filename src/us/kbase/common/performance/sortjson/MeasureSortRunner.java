@@ -3,12 +3,16 @@ package us.kbase.common.performance.sortjson;
 import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,12 +29,20 @@ import org.jfree.chart.title.LegendTitle;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import us.kbase.common.service.Tuple11;
+import us.kbase.workspace.ObjectData;
+import us.kbase.workspace.ObjectIdentity;
+import us.kbase.workspace.WorkspaceClient;
+
 
 public class MeasureSortRunner {
 	
+	final static String WORKSPACE_URL = "http://kbase.us/services/ws";
+	
 	final static int NUM_SORTS = 500;
 	final static int TIME_INTERVAL = 100; //ms
-	final static String FILE = "src/us/kbase/common/performance/sortjson/83333.2.txt";
 	
 	final static List<String> SORTERS = new ArrayList<String>();
 	static {
@@ -62,23 +74,65 @@ public class MeasureSortRunner {
 	final static String MEAS_JAVA_FILE =
 			CODE_ROOT + "/" + MEAS_CLASS_FILE.replace(".", "/");
 	
+	private static WorkspaceClient ws;
+	
 	public static void main(String[] args) throws Exception {
 		
 		System.setProperty("java.awt.headless", "true");
 		compileMeasureSort();
 		
+		Path p = Paths.get(".");
+		
+		ws = new WorkspaceClient(new URL(WORKSPACE_URL));
+		
+		List<ObjectIdentity> objs = new ArrayList<ObjectIdentity>();
+		objs.add(new ObjectIdentity().withRef("637/35"));
+//		objs.add(new ObjectIdentity().withRef("637/308"));
+//		objs.add(new ObjectIdentity().withRef("1200/MinimalMedia"));
+		for (ObjectIdentity oi: objs) {
+			measureObjectMemAndSpeed(p,oi);
+		}
+	}
+
+	private static void measureObjectMemAndSpeed(Path dir, ObjectIdentity oi)
+			throws Exception {
+		
 		int numSorts = NUM_SORTS;
 		int interval = TIME_INTERVAL;
-		File file = new File(FILE);
-		String title = "Title";
-		String outputPrefix = "output";
 		
-		System.out.println("Recording memory usage");
-		measureSorterMemUsage(numSorts, interval, file, title, outputPrefix);
+		ObjectData data = ws.getObjects(Arrays.asList(oi)).get(0);
+		Tuple11<Long, String, String, String, Long, String, Long, String, String, Long, Map<String, String>>
+				info = data.getInfo();
+		String ref = info.getE7() + "/" + info.getE1() + "/" + info.getE5();
+		String name = info.getE8() + "/" + info.getE2() + "/" + info.getE5();
+		String title = ref + " " + name + " " + info.getE3();
+		String memOutputPrefix = ref.replace("/", "_") + ".memresults"; 
+		String speedOutputPrefix = ref.replace("/", "_") + ".speedresults"; 
+		
+		Path d = dir.resolve(info.getE3());
+		Files.createDirectories(d);
+
+		Path input = d.resolve(ref.replace("/", "_") + ".object.txt");
+		input.toFile().createNewFile();
+		input.toFile().deleteOnExit();
+		new ObjectMapper().writeValue(input.toFile(), data.getData().asInstance());
+		data = null;
+
+		System.out.println("Recording memory usage for " + ref);
+		measureSorterMemUsage(numSorts, interval, input, title, d, memOutputPrefix);
+		System.out.println("Recording speed for " + ref);
+		measureSorterSpeed(numSorts, input, title, d, speedOutputPrefix);
+		Files.deleteIfExists(input);
+	}
+
+	private static void measureSorterSpeed(int numSorts, Path input,
+			String title, Path d, String speedOutputPrefix) {
+		// TODO Auto-generated method stub
+		
 	}
 
 	private static void measureSorterMemUsage(int numSorts, int interval,
-			File input, String title, String outputPrefix)
+			Path input, String title, Path dir, String outputPrefix)
 			throws IOException, InterruptedException {
 		
 		Map<String, List<Double>> mems = new LinkedHashMap<String, List<Double>>();
@@ -88,16 +142,16 @@ public class MeasureSortRunner {
 		}
 		
 		String params = String.format(
-				"Sorts: %s, Interval (ms): %s, file: %s, size (MB): %,.2f",
-				numSorts, interval, input, input.length() / 1000000.0);
+				"Sorts: %s, Interval (ms): %s, size (MB): %,.2f",
+				numSorts, interval, input.toFile().length() / 1000000.0);
 		
-		saveChart(new File(outputPrefix + ".png"), mems, title, params);
-		saveData(new File(outputPrefix + ".txt"), mems, title, params);
+		saveChart(dir.resolve(Paths.get(outputPrefix + ".png")), mems, title, params);
+		saveData(dir.resolve(Paths.get(outputPrefix + ".txt")), mems, title, params);
 	}
 
-	private static void saveData(File file, Map<String, List<Double>> mems,
+	private static void saveData(Path file, Map<String, List<Double>> mems,
 			String title, String params) throws IOException {
-		BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+		BufferedWriter bw = Files.newBufferedWriter(file, Charset.forName("UTF-8"));
 		bw.write(title + "\n");
 		bw.write(params + "\n");
 		for (String s: mems.keySet()) {
@@ -111,7 +165,7 @@ public class MeasureSortRunner {
 		bw.close();
 	}
 
-	private static JFreeChart saveChart(File f, Map<String, List<Double>> mems,
+	private static JFreeChart saveChart(Path f, Map<String, List<Double>> mems,
 			String title, String params) throws IOException {
 		XYSeriesCollection xyc = new XYSeriesCollection();
 		for (String sorter: SORTERS) {
@@ -145,16 +199,19 @@ public class MeasureSortRunner {
 		plot.setBackgroundPaint(Color.white);
 		plot.setDomainGridlinePaint(Color.gray);
 		plot.setRangeGridlinePaint(Color.gray);
+		
+		plot.getRenderer().setSeriesPaint(2, new Color(20, 184, 69));
+		plot.getRenderer().setSeriesPaint(3, new Color(184, 173, 20));
 
 		final ValueAxis domainAxis = plot.getDomainAxis();
 		domainAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
 		
-		ChartUtilities.saveChartAsPNG(f, chart, 700, 500);
+		ChartUtilities.saveChartAsPNG(f.toFile(), chart, 700, 500);
 		return chart;
 	}
 	
 	private static List<Double> runMeasureSort(int numSorts,
-			int interval, File file, String sorter) throws IOException,
+			int interval, Path file, String sorter) throws IOException,
 			InterruptedException {
 		Process p = Runtime.getRuntime().exec(new String [] {
 				"java", "-cp", CLASSPATH, MEAS_CLASS_FILE,
