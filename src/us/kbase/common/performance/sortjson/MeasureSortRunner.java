@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,9 +88,9 @@ public class MeasureSortRunner {
 		ws = new WorkspaceClient(new URL(WORKSPACE_URL));
 		
 		List<ObjectIdentity> objs = new ArrayList<ObjectIdentity>();
-		objs.add(new ObjectIdentity().withRef("637/35"));
+//		objs.add(new ObjectIdentity().withRef("637/35"));
 //		objs.add(new ObjectIdentity().withRef("637/308"));
-//		objs.add(new ObjectIdentity().withRef("1200/MinimalMedia"));
+		objs.add(new ObjectIdentity().withRef("1200/MinimalMedia"));
 		for (ObjectIdentity oi: objs) {
 			measureObjectMemAndSpeed(p,oi);
 		}
@@ -118,10 +119,10 @@ public class MeasureSortRunner {
 		new ObjectMapper().writeValue(input.toFile(), data.getData().asInstance());
 		data = null;
 
-		System.out.println("Recording memory usage for " + ref);
+		System.out.println("Recording memory usage for " + ref + " " + new Date());
 		measureSorterMemUsage(numSorts, interval, input, title, d, memOutputPrefix);
 		
-		System.out.println("Recording speed for " + ref);
+		System.out.println("Recording speed for " + ref + " " + new Date());
 		measureSorterSpeed(numSorts, input, title,
 				d.resolve(ref.replace("/", "_") + ".speed.txt"));
 		
@@ -155,7 +156,7 @@ public class MeasureSortRunner {
 		
 		Map<String, List<Double>> mems = new LinkedHashMap<String, List<Double>>();
 		for (String sorter: SORTERS) {
-			System.out.println("Running sorter: " + sorter);
+			System.out.println("Running sorter: " + sorter + " " + new Date());
 			mems.put(sorter, runMeasureSort(numSorts, interval, input, sorter));
 		}
 		
