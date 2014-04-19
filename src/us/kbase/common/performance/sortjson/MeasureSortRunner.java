@@ -49,16 +49,18 @@ public class MeasureSortRunner {
 	
 	final static Path OUTPUT_DIR = Paths.get(".");
 	//set to 0 or less to use pre chosen test objects below
-	final static int NUM_OBJECTS_TO_TEST = 10;
+	final static int NUM_OBJECTS_TO_TEST = 0;
 	//random tester won't use objects below this size
 	final static int MIN_SIZE_B = 1000000;
 	
 	final static List<ObjectIdentity> TEST_OBJECTS =
 			new ArrayList<ObjectIdentity>();
 	static {
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/35"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/308"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("1200/MinimalMedia"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/2"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/3")); 
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/35"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/308"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("1200/MinimalMedia"));
 	}
 	
 	final static int NUM_SORTS = 500;
@@ -112,7 +114,7 @@ public class MeasureSortRunner {
 			int count = 1;
 			for (ObjectIdentity oi: TEST_OBJECTS) {
 				System.out.println(String.format("Testing object %s of %s",
-						++count, TEST_OBJECTS.size()));
+						count++, TEST_OBJECTS.size()));
 				measureObjectMemAndSpeed(OUTPUT_DIR, oi);
 			}
 		} else {
