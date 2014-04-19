@@ -14,9 +14,12 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
@@ -30,21 +33,38 @@ import org.jfree.chart.title.LegendTitle;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import us.kbase.common.performance.PerformanceMeasurement;
 import us.kbase.common.service.Tuple11;
+import us.kbase.common.service.Tuple9;
+import us.kbase.workspace.ListObjectsParams;
+import us.kbase.workspace.ListWorkspaceInfoParams;
 import us.kbase.workspace.ObjectData;
 import us.kbase.workspace.ObjectIdentity;
 import us.kbase.workspace.WorkspaceClient;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 
 public class MeasureSortRunner {
 	
-	final static String WORKSPACE_URL = "http://kbase.us/services/ws";
+	final static Path OUTPUT_DIR = Paths.get(".");
+	//set to 0 or less to use pre chosen test objects below
+	final static int NUM_OBJECTS_TO_TEST = 10;
+	//random tester won't use objects below this size
+	final static int MIN_SIZE_B = 1000000;
+	
+	final static List<ObjectIdentity> TEST_OBJECTS =
+			new ArrayList<ObjectIdentity>();
+	static {
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/35"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/308"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("1200/MinimalMedia"));
+	}
 	
 	final static int NUM_SORTS = 500;
 	final static int TIME_INTERVAL = 100; //ms
+
+	final static String WORKSPACE_URL = "http://kbase.us/services/ws";
 	
 	final static List<String> SORTERS = new ArrayList<String>();
 	static {
@@ -81,19 +101,57 @@ public class MeasureSortRunner {
 	public static void main(String[] args) throws Exception {
 		
 		System.setProperty("java.awt.headless", "true");
+		System.out.println("Java version: " + System.getProperty("java.version"));
 		compileMeasureSort();
-		
-		Path p = Paths.get(".");
 		
 		ws = new WorkspaceClient(new URL(WORKSPACE_URL));
 		
-		List<ObjectIdentity> objs = new ArrayList<ObjectIdentity>();
-//		objs.add(new ObjectIdentity().withRef("637/35"));
-//		objs.add(new ObjectIdentity().withRef("637/308"));
-		objs.add(new ObjectIdentity().withRef("1200/MinimalMedia"));
-		for (ObjectIdentity oi: objs) {
-			measureObjectMemAndSpeed(p,oi);
+		int numObjs = NUM_OBJECTS_TO_TEST;
+		
+		if (numObjs < 1) {
+			int count = 1;
+			for (ObjectIdentity oi: TEST_OBJECTS) {
+				System.out.println(String.format("Testing object %s of %s",
+						++count, TEST_OBJECTS.size()));
+				measureObjectMemAndSpeed(OUTPUT_DIR, oi);
+			}
+		} else {
+			Random r = new Random();
+			Set<String> seenObjs = new HashSet<String>();
+			for (int i = 0; i < NUM_OBJECTS_TO_TEST; i++) {
+				System.out.println(String.format("Testing object %s of %s",
+						i + 1, NUM_OBJECTS_TO_TEST));
+				ObjectIdentity oi = getRandomObject(seenObjs, r);
+				measureObjectMemAndSpeed(OUTPUT_DIR, oi);
+			}
 		}
+	}
+
+	private static ObjectIdentity getRandomObject(Set<String> seenObjs, Random rand)
+			throws Exception {
+		ObjectIdentity good = null;
+		while (good == null) {
+			List<Tuple9<Long, String, String, String, Long, String, String, String, Map<String, String>>>
+					workspaces = ws.listWorkspaceInfo(new ListWorkspaceInfoParams());
+			int wsr = rand.nextInt(workspaces.size());
+			List<Tuple11<Long, String, String, String, Long, String, Long, String, String, Long, Map<String, String>>>
+					objs = ws.listObjects(new ListObjectsParams()
+						.withIds(Arrays.asList(workspaces.get(wsr).getE1()))
+						.withShowHidden(1L));
+			if (objs.size() == 0) continue;
+			int objr = rand.nextInt(objs.size());
+			long work = objs.get(objr).getE7();
+			long objid = objs.get(objr).getE1();
+			long size = objs.get(objr).getE10();
+			String wsobj = work + "_" + objid;
+			if (!seenObjs.contains(wsobj)) {
+				seenObjs.add(wsobj);
+				if (size > MIN_SIZE_B) {
+					good = new ObjectIdentity().withWsid(work).withObjid(objid);
+				}
+			}
+		}
+		return good;
 	}
 
 	private static void measureObjectMemAndSpeed(Path dir, ObjectIdentity oi)
@@ -128,6 +186,7 @@ public class MeasureSortRunner {
 				d.resolve(ref.replace("/", "_") + ".speed.txt"));
 		
 		Files.deleteIfExists(input);
+		System.out.println();
 	}
 
 	private static void measureSorterSpeed(int numSorts, Path input,
