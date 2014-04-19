@@ -3,6 +3,8 @@ package us.kbase.common.performance.sortjson;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Date;
@@ -50,20 +52,27 @@ public class MeasureSortJsonSpeed {
 		}
 		System.out.println("Starting tests");
 		
-		PerformanceMeasurement js = measureJsonSort(b, NUM_SORTS);
+		File f = FILE;
+		int sorts = NUM_SORTS;
+		
+		PerformanceMeasurement js = measureJsonSort(b, sorts);
 
-		PerformanceMeasurement skjb = measureSKJBSort(b, NUM_SORTS);
+		PerformanceMeasurement skjb = measureSKJBSort(b, sorts);
 
-		PerformanceMeasurement skjfb = measureSKJFSort(b, NUM_SORTS);
+		PerformanceMeasurement skjfb = measureSKJFSort(b, sorts);
 
 		b = null;
-		PerformanceMeasurement skjff = measureSKJFSort(FILE, NUM_SORTS);
+		PerformanceMeasurement skjff = measureSKJFSort(f, sorts);
 
 		System.out.println("Complete: " + new Date());
-		renderResults(Arrays.asList(js, skjb, skjfb, skjff));
+		
+		Writer stdout = new PrintWriter(System.out);
+		renderResults(Arrays.asList(js, skjb, skjfb, skjff), stdout);
+		stdout.close();
 	}
 	
-	private static void renderResults(List<PerformanceMeasurement> pms) {
+	static void renderResults(List<PerformanceMeasurement> pms, Writer w)
+			throws Exception {
 		final int width = 4;
 		Table tbl = new Table(width);
 		tbl.addCell("Operation");
@@ -76,7 +85,7 @@ public class MeasureSortJsonSpeed {
 			tbl.addCell(String.format("%,.4f", pm.getAverageInSec()));
 			tbl.addCell(String.format("%,.4f", pm.getStdDevInSec()));
 		}
-		System.out.println(tbl.render());
+		w.write(tbl.render());
 	}
 
 	private static PerformanceMeasurement measureSKJFSortStringKeys(byte[] b, int sorts)
@@ -91,7 +100,7 @@ public class MeasureSortJsonSpeed {
 		return new PerformanceMeasurement(m, "SortedKeysJsonFile JSON sort with String keys");
 	}
 	
-	private static PerformanceMeasurement measureSKJFSort(byte[] b, int sorts)
+	static PerformanceMeasurement measureSKJFSort(byte[] b, int sorts)
 			throws Exception {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
@@ -109,7 +118,7 @@ public class MeasureSortJsonSpeed {
 		}
 	}
 
-	private static PerformanceMeasurement measureSKJFSort(File temp, int sorts)
+	static PerformanceMeasurement measureSKJFSort(File temp, int sorts)
 			throws Exception {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
@@ -120,7 +129,7 @@ public class MeasureSortJsonSpeed {
 		return new PerformanceMeasurement(m, "SortedKeysJsonFile JSON file sort");
 	}
 	
-	private static PerformanceMeasurement measureSKJBSort(byte[] b, int sorts)
+	static PerformanceMeasurement measureSKJBSort(byte[] b, int sorts)
 			throws Exception {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
@@ -131,7 +140,7 @@ public class MeasureSortJsonSpeed {
 		return new PerformanceMeasurement(m, "SortedKeysJsonBytes JSON sort");
 	}
 
-	private static PerformanceMeasurement measureJsonSort(byte[] b, int sorts)
+	static PerformanceMeasurement measureJsonSort(byte[] b, int sorts)
 			throws Exception {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {

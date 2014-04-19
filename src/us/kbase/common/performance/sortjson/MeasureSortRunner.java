@@ -31,6 +31,7 @@ import org.jfree.data.xy.XYSeriesCollection;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import us.kbase.common.performance.PerformanceMeasurement;
 import us.kbase.common.service.Tuple11;
 import us.kbase.workspace.ObjectData;
 import us.kbase.workspace.ObjectIdentity;
@@ -107,7 +108,6 @@ public class MeasureSortRunner {
 		String name = info.getE8() + "/" + info.getE2() + "/" + info.getE5();
 		String title = ref + " " + name + " " + info.getE3();
 		String memOutputPrefix = ref.replace("/", "_") + ".memresults"; 
-		String speedOutputPrefix = ref.replace("/", "_") + ".speedresults"; 
 		
 		Path d = dir.resolve(info.getE3());
 		Files.createDirectories(d);
@@ -120,15 +120,33 @@ public class MeasureSortRunner {
 
 		System.out.println("Recording memory usage for " + ref);
 		measureSorterMemUsage(numSorts, interval, input, title, d, memOutputPrefix);
+		
 		System.out.println("Recording speed for " + ref);
-		measureSorterSpeed(numSorts, input, title, d, speedOutputPrefix);
+		measureSorterSpeed(numSorts, input, title,
+				d.resolve(ref.replace("/", "_") + ".speed.txt"));
+		
 		Files.deleteIfExists(input);
 	}
 
 	private static void measureSorterSpeed(int numSorts, Path input,
-			String title, Path d, String speedOutputPrefix) {
-		// TODO Auto-generated method stub
+			String title, Path output) throws Exception {
 		
+		byte[] b = Files.readAllBytes(input);
+		
+		PerformanceMeasurement js = MeasureSortJsonSpeed.measureJsonSort(b, numSorts);
+
+		PerformanceMeasurement skjb = MeasureSortJsonSpeed.measureSKJBSort(b, numSorts);
+
+		PerformanceMeasurement skjfb = MeasureSortJsonSpeed.measureSKJFSort(b, numSorts);
+
+		b = null;
+		PerformanceMeasurement skjff = MeasureSortJsonSpeed.measureSKJFSort(input.toFile(), numSorts);
+		
+		BufferedWriter bw = Files.newBufferedWriter(output, Charset.forName("UTF-8"));
+		bw.write(title + String.format(" Size (MB): %,.2f",
+				input.toFile().length() / 1000000.0) + "\n");
+		MeasureSortJsonSpeed.renderResults(Arrays.asList(js, skjb, skjfb, skjff), bw);
+		bw.close();
 	}
 
 	private static void measureSorterMemUsage(int numSorts, int interval,
@@ -145,11 +163,11 @@ public class MeasureSortRunner {
 				"Sorts: %s, Interval (ms): %s, size (MB): %,.2f",
 				numSorts, interval, input.toFile().length() / 1000000.0);
 		
-		saveChart(dir.resolve(Paths.get(outputPrefix + ".png")), mems, title, params);
-		saveData(dir.resolve(Paths.get(outputPrefix + ".txt")), mems, title, params);
+		saveMemChart(dir.resolve(Paths.get(outputPrefix + ".png")), mems, title, params);
+		saveMemData(dir.resolve(Paths.get(outputPrefix + ".txt")), mems, title, params);
 	}
 
-	private static void saveData(Path file, Map<String, List<Double>> mems,
+	private static void saveMemData(Path file, Map<String, List<Double>> mems,
 			String title, String params) throws IOException {
 		BufferedWriter bw = Files.newBufferedWriter(file, Charset.forName("UTF-8"));
 		bw.write(title + "\n");
@@ -165,7 +183,7 @@ public class MeasureSortRunner {
 		bw.close();
 	}
 
-	private static JFreeChart saveChart(Path f, Map<String, List<Double>> mems,
+	private static JFreeChart saveMemChart(Path f, Map<String, List<Double>> mems,
 			String title, String params) throws IOException {
 		XYSeriesCollection xyc = new XYSeriesCollection();
 		for (String sorter: SORTERS) {
@@ -219,12 +237,12 @@ public class MeasureSortRunner {
 		});
 		List<Double> mem = new ArrayList<Double>();
 		BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+		finishProcess(p, "Run failed");
 		while (true) {
 			String l = br.readLine();
 			if (l == null) break;
 			mem.add(Double.parseDouble(l));
 		}
-		finish(p, "Run failed");
 		return mem;
 	}
 
@@ -232,10 +250,10 @@ public class MeasureSortRunner {
 			throws IOException, InterruptedException {
 		Process p = Runtime.getRuntime().exec(new String[] {
 				"javac", "-cp", CLASSPATH, MEAS_JAVA_FILE + ".java"});
-		finish(p, "Compile failed");
+		finishProcess(p, "Compile failed");
 	}
 
-	private static void finish(Process p, String err)
+	private static void finishProcess(Process p, String err)
 			throws InterruptedException, IOException {
 		p.waitFor();
 		if (p.exitValue() != 0) {
