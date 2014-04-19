@@ -119,7 +119,8 @@ public class MeasureSortRunner {
 		new ObjectMapper().writeValue(input.toFile(), data.getData().asInstance());
 		data = null;
 
-		System.out.println("Recording memory usage for " + ref + " " + new Date());
+		System.out.println(String.format("Recording memory usage for %s, %sB, %s",
+				ref, info.getE10(), new Date()));
 		measureSorterMemUsage(numSorts, interval, input, title, d, memOutputPrefix);
 		
 		System.out.println("Recording speed for " + ref + " " + new Date());
