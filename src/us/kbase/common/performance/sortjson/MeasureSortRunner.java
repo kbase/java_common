@@ -175,7 +175,9 @@ public class MeasureSortRunner {
 		String ref = info.getE7() + "/" + info.getE1() + "/" + info.getE5();
 		String name = info.getE8() + "/" + info.getE2() + "/" + info.getE5();
 		String title = ref + " " + name + " " + info.getE3();
-		String memOutputPrefix = ref.replace("/", "_") + ".memresults"; 
+		long size = info.getE10();
+		String mb = String.format("%,.2fMB", size / 1000000.0);
+		String outputPrefix = mb + "_" + ref.replace("/", "_");
 		
 		Path d = dir.resolve(info.getE3());
 		Files.createDirectories(d);
@@ -186,7 +188,6 @@ public class MeasureSortRunner {
 		new ObjectMapper().writeValue(input.toFile(), data.getData().asInstance());
 		data = null;
 		
-		long size = info.getE10();
 		int numSorts = SIZE_CUTOFFS.get(0).get(NUM_SORTS_POS);
 		int interval = SIZE_CUTOFFS.get(0).get(INTERVAL_POS);
 		for (Entry<Integer, List<Integer>> sz: SIZE_CUTOFFS.entrySet()) {
@@ -199,11 +200,11 @@ public class MeasureSortRunner {
 
 		System.out.println(String.format("Recording memory usage for %s, %sB, sorts: %s, interval: %s, %s",
 				ref, info.getE10(), numSorts, interval, new Date()));
-		measureSorterMemUsage(numSorts, interval, input, title, d, memOutputPrefix);
+		measureSorterMemUsage(numSorts, interval, input, title, d, outputPrefix + ".memresults");
 		
 		System.out.println("Recording speed for " + ref + " " + new Date());
 		measureSorterSpeed(numSorts, input, title,
-				d.resolve(ref.replace("/", "_") + ".speed.txt"));
+				d.resolve(outputPrefix +  ".speed.txt"));
 		
 		Files.deleteIfExists(input);
 		System.out.println();
