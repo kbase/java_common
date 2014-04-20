@@ -123,7 +123,9 @@ public class MeasureSortJsonSpeed {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
 			long start = System.nanoTime();
-			new SortedKeysJsonFile(temp).writeIntoStream(new NullOutputStream());
+			SortedKeysJsonFile sk = new SortedKeysJsonFile(temp);
+			sk.writeIntoStream(new NullOutputStream());
+			sk.close();
 			m.add(System.nanoTime() - start);
 		}
 		return new PerformanceMeasurement(m, "SortedKeysJsonFile JSON file sort");

@@ -57,7 +57,7 @@ public class MeasureSortJsonMem {
 			sorter = args[3];
 		}
 		
-		System.err.println("Java version: " + System.getProperty("java.version"));
+//		System.err.println("Java version: " + System.getProperty("java.version"));
 		
 		List<Long> mem = recordMemory(interval, SORTERS.get(sorter), file,
 				numSorts);
