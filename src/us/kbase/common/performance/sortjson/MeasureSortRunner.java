@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
@@ -63,9 +64,6 @@ public class MeasureSortRunner {
 //		TEST_OBJECTS.add(new ObjectIdentity().withRef("1200/MinimalMedia"));
 	}
 	
-	final static int NUM_SORTS = 500;
-	final static int TIME_INTERVAL = 100; //ms
-
 	final static String WORKSPACE_URL = "http://kbase.us/services/ws";
 	
 	final static List<String> SORTERS = new ArrayList<String>();
@@ -97,6 +95,18 @@ public class MeasureSortRunner {
 	
 	final static String MEAS_JAVA_FILE =
 			CODE_ROOT + "/" + MEAS_CLASS_FILE.replace(".", "/");
+	
+	private static final int NUM_SORTS_POS = 0;
+	private static final int INTERVAL_POS = 1;
+	
+	private static final Map<Integer, List<Integer>> SIZE_CUTOFFS =
+			new LinkedHashMap<Integer, List<Integer>>();
+	static {
+		SIZE_CUTOFFS.put(100000000, Arrays.asList(10, 5000));
+		SIZE_CUTOFFS.put(20000000, Arrays.asList(20, 1000));
+		SIZE_CUTOFFS.put(10000000, Arrays.asList(100, 500));
+		SIZE_CUTOFFS.put(0, Arrays.asList(500, 100));
+	}
 	
 	private static WorkspaceClient ws;
 	
@@ -159,9 +169,6 @@ public class MeasureSortRunner {
 	private static void measureObjectMemAndSpeed(Path dir, ObjectIdentity oi)
 			throws Exception {
 		
-		int numSorts = NUM_SORTS;
-		int interval = TIME_INTERVAL;
-		
 		ObjectData data = ws.getObjects(Arrays.asList(oi)).get(0);
 		Tuple11<Long, String, String, String, Long, String, Long, String, String, Long, Map<String, String>>
 				info = data.getInfo();
@@ -178,9 +185,20 @@ public class MeasureSortRunner {
 		input.toFile().deleteOnExit();
 		new ObjectMapper().writeValue(input.toFile(), data.getData().asInstance());
 		data = null;
+		
+		long size = info.getE10();
+		int numSorts = SIZE_CUTOFFS.get(0).get(NUM_SORTS_POS);
+		int interval = SIZE_CUTOFFS.get(0).get(INTERVAL_POS);
+		for (Entry<Integer, List<Integer>> sz: SIZE_CUTOFFS.entrySet()) {
+			if (size > sz.getKey()) {
+				numSorts = sz.getValue().get(NUM_SORTS_POS);
+				interval = sz.getValue().get(INTERVAL_POS);
+				break;
+			}
+		}
 
-		System.out.println(String.format("Recording memory usage for %s, %sB, %s",
-				ref, info.getE10(), new Date()));
+		System.out.println(String.format("Recording memory usage for %s, %sB, sorts: %s, interval: %s, %s",
+				ref, info.getE10(), numSorts, interval, new Date()));
 		measureSorterMemUsage(numSorts, interval, input, title, d, memOutputPrefix);
 		
 		System.out.println("Recording speed for " + ref + " " + new Date());
