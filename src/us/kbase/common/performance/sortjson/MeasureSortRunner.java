@@ -57,10 +57,10 @@ public class MeasureSortRunner {
 	final static List<ObjectIdentity> TEST_OBJECTS =
 			new ArrayList<ObjectIdentity>();
 	static {
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/2"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/3")); 
-//		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/35"));
-//		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/308"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/2"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/3")); 
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/35"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/308"));
 //		TEST_OBJECTS.add(new ObjectIdentity().withRef("1200/MinimalMedia"));
 	}
 	
@@ -312,26 +312,40 @@ public class MeasureSortRunner {
 	private static List<Double> runMeasureSort(int numSorts,
 			int interval, Path file, String sorter) throws IOException,
 			InterruptedException {
-		Process p = Runtime.getRuntime().exec(new String [] {
-				"java", "-cp", CLASSPATH, MEAS_CLASS_FILE,
-				Integer.toString(numSorts), Integer.toString(interval), file.toString(), sorter
-		});
+		Process p = new ProcessBuilder(new String [] {
+					"java", "-cp", CLASSPATH, MEAS_CLASS_FILE,
+					Integer.toString(numSorts), Integer.toString(interval),
+					file.toString(), sorter
+					}).start();
 		List<Double> mem = new ArrayList<Double>();
 		BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
-		finishProcess(p, "Run failed");
-		while (true) {
+		finishProcess(p, "Run failed"); //dangerous, could deadlock here - may need to change
+		while (true) { 
 			String l = br.readLine();
 			if (l == null) break;
 			mem.add(Double.parseDouble(l));
 		}
+		br.close();
+		BufferedReader err = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+		String l = err.readLine();
+		if (l != null) {
+			System.out.println("Sort measurer STDERR:");
+		}
+		while (l != null) { 
+			System.out.println(l);
+			l = err.readLine();
+		}
+		err.close();
+		p.destroy();
 		return mem;
 	}
 
 	private static void compileMeasureSort()
 			throws IOException, InterruptedException {
-		Process p = Runtime.getRuntime().exec(new String[] {
-				"javac", "-cp", CLASSPATH, MEAS_JAVA_FILE + ".java"});
-		finishProcess(p, "Compile failed");
+		Process p = new ProcessBuilder(new String[] {
+				"javac", "-cp", CLASSPATH, MEAS_JAVA_FILE + ".java"}).start();
+		finishProcess(p, "Compile failed"); //dangerous, could deadlock here - may need to change
+		p.destroy();
 	}
 
 	private static void finishProcess(Process p, String err)

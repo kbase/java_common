@@ -57,6 +57,8 @@ public class MeasureSortJsonMem {
 			sorter = args[3];
 		}
 		
+		System.err.println("Java version: " + System.getProperty("java.version"));
+		
 		List<Long> mem = recordMemory(interval, SORTERS.get(sorter), file,
 				numSorts);
 		
@@ -141,7 +143,9 @@ public class MeasureSortJsonMem {
 		@Override
 		public void sort(File f, int sorts) throws Exception {
 			for (int i = 0; i < sorts; i++) {
-				new SortedKeysJsonFile(f).writeIntoStream(new NullOutputStream());
+				SortedKeysJsonFile sk = new SortedKeysJsonFile(f);
+				sk.writeIntoStream(new NullOutputStream());
+				sk.close();
 			}
 		}
 	}
