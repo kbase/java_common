@@ -6,6 +6,8 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -126,6 +128,19 @@ public class MeasureSortRunner {
 		
 		System.setProperty("java.awt.headless", "true");
 		System.out.println("Java version: " + System.getProperty("java.version"));
+		System.out.println("Mem: total: " + Runtime.getRuntime().totalMemory() + 
+				" max: " + Runtime.getRuntime().maxMemory());
+		System.out.println("Input args:");
+		System.out.println(ManagementFactory.getRuntimeMXBean().getInputArguments());
+		System.out.println("Garbage collectors:");
+		for (GarbageCollectorMXBean g: ManagementFactory.getGarbageCollectorMXBeans()) {
+			System.out.println(g.getName() + " - Valid: " + g.isValid());
+			String[] m = g.getMemoryPoolNames();
+			for (int i = 0; i < m.length; i++) {
+				System.out.println("\t" + m[i]);
+			}
+		}
+		
 		compileMeasureSort();
 		
 		ws = new WorkspaceClient(new URL(WORKSPACE_URL));
