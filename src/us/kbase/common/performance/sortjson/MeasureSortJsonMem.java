@@ -4,12 +4,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
+import us.kbase.common.utils.MD5;
+import us.kbase.common.utils.MD5DigestOutputStream;
 import us.kbase.common.utils.sortjson.SortedKeysJsonBytes;
 import us.kbase.common.utils.sortjson.SortedKeysJsonFile;
 
@@ -24,7 +28,7 @@ public class MeasureSortJsonMem {
 	final static Map<String, NullSort> SORTERS = new HashMap<String, NullSort>();
 	static {
 		SORTERS.put("Jackson", new JacksonSorter());
-		SORTERS.put("SortedJsonBytes", new SortedKeyJsonBytesSorter());
+		SORTERS.put("SortedJsonBytes", new SortedKeysJsonBytesSorter());
 		SORTERS.put("SortedJsonFile-bytes", new SortedKeysJsonFileBytesSorter());
 		SORTERS.put("SortedJsonFile-file", new SortedKeysJsonFileSorter());
 	}
@@ -81,8 +85,19 @@ public class MeasureSortJsonMem {
 		return mem.getUsedMemOverTime();
 	}
 	
+	protected static Map<String, MD5> getMD5s(Path input) throws Exception {
+		Map<String, MD5> ret = new HashMap<String, MD5>();
+		for (Entry<String, NullSort> s: SORTERS.entrySet()) {
+			MD5DigestOutputStream mo = new MD5DigestOutputStream();
+			s.getValue().sort(input.toFile(), mo);
+			ret.put(s.getKey(), mo.getMD5());
+		}
+		return ret;
+	}
+	
 	private interface NullSort {
 		public void sort(File f, int sorts) throws Exception;
+		public void sort(File f, OutputStream out) throws Exception;
 	}
 	
 	private static class RecordMem {
@@ -127,7 +142,7 @@ public class MeasureSortJsonMem {
 		}
 	}
 
-	static class SortedKeysJsonFileBytesSorter implements NullSort {
+	protected static class SortedKeysJsonFileBytesSorter implements NullSort {
 		
 		@Override
 		public void sort(File f, int sorts) throws Exception {
@@ -136,9 +151,16 @@ public class MeasureSortJsonMem {
 				new SortedKeysJsonFile(b).writeIntoStream(new NullOutputStream());
 			}
 		}
+
+		@Override
+		public void sort(File f, OutputStream out) throws Exception {
+			byte[] b = Files.readAllBytes(f.toPath());
+			new SortedKeysJsonFile(b).writeIntoStream(out);
+		}
+		
 	}
 	
-	static class SortedKeysJsonFileSorter implements NullSort {
+	protected static class SortedKeysJsonFileSorter implements NullSort {
 		
 		@Override
 		public void sort(File f, int sorts) throws Exception {
@@ -148,9 +170,17 @@ public class MeasureSortJsonMem {
 				sk.close();
 			}
 		}
+
+		@Override
+		public void sort(File f, OutputStream out) throws Exception {
+			SortedKeysJsonFile sk = new SortedKeysJsonFile(f);
+			sk.writeIntoStream(out);
+			sk.close();
+			
+		}
 	}
 	
-	static class SortedKeyJsonBytesSorter implements NullSort {
+	protected static class SortedKeysJsonBytesSorter implements NullSort {
 		
 		@Override
 		public void sort(File f, int sorts) throws Exception {
@@ -159,9 +189,15 @@ public class MeasureSortJsonMem {
 				new SortedKeysJsonBytes(b).writeIntoStream(new NullOutputStream());
 			}
 		}
+
+		@Override
+		public void sort(File f, OutputStream out) throws Exception {
+			byte[] b = Files.readAllBytes(f.toPath());
+			new SortedKeysJsonBytes(b).writeIntoStream(out);
+		}
 	}
 	
-	static class JacksonSorter implements NullSort {
+	protected static class JacksonSorter implements NullSort {
 		
 		private static final ObjectMapper MAPPER = new ObjectMapper();
 		static {
@@ -180,6 +216,16 @@ public class MeasureSortJsonMem {
 				jn = null;
 				MAPPER.writeValue(new NullOutputStream(), d);
 			}
+		}
+
+		@Override
+		public void sort(File f, OutputStream out) throws Exception {
+			byte[] b = Files.readAllBytes(f.toPath());
+			JsonNode jn = MAPPER.readTree(b); //detects duplicate keys with Jackson 2.3+
+			@SuppressWarnings("unchecked")
+			Map<String, Object> d = MAPPER.treeToValue(jn, Map.class); //only Maps are sorted, not JsonNodes, as of 2.3+
+			jn = null;
+			MAPPER.writeValue(out, d);
 		}
 	}
 	

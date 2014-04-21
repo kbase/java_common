@@ -37,6 +37,7 @@ import org.jfree.data.xy.XYSeriesCollection;
 import us.kbase.common.performance.PerformanceMeasurement;
 import us.kbase.common.service.Tuple11;
 import us.kbase.common.service.Tuple9;
+import us.kbase.common.utils.MD5;
 import us.kbase.workspace.ListObjectsParams;
 import us.kbase.workspace.ListWorkspaceInfoParams;
 import us.kbase.workspace.ObjectData;
@@ -53,19 +54,30 @@ public class MeasureSortRunner {
 	final static int NUM_OBJECTS_TO_TEST = 0;
 	//random tester won't use objects below this size
 	final static int MIN_SIZE_B = 1000000;
+	final static boolean CHECK_SORT_CORRECTNESS = true;
 	
 	final static List<ObjectIdentity> TEST_OBJECTS =
 			new ArrayList<ObjectIdentity>();
 	static {
-//		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/2"));
-//		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/3")); 
 		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/35"));
 		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/308"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/1"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/2"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/3"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/1"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/2"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/3"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/4"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/5"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/6"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/7"));
+		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/8"));
 //		TEST_OBJECTS.add(new ObjectIdentity().withRef("1200/MinimalMedia"));
 	}
 	
 	final static String WORKSPACE_URL = "http://kbase.us/services/ws";
 	
+	final static String JACKSON = "Jackson";
 	final static List<String> SORTERS = new ArrayList<String>();
 	static {
 		SORTERS.add("Jackson");
@@ -188,6 +200,32 @@ public class MeasureSortRunner {
 		new ObjectMapper().writeValue(input.toFile(), data.getData().asInstance());
 		data = null;
 		
+		System.out.println(String.format("Testing object %s, %sB, %s",
+				ref, info.getE10(), new Date()));
+		
+		if (CHECK_SORT_CORRECTNESS) {
+			boolean good = true;
+			Map<String, MD5> md5s = MeasureSortJsonMem.getMD5s(input);
+			MD5 jMD5 = md5s.get(JACKSON);
+			List<String> output = new ArrayList<String>();
+			for (Entry<String, MD5> m: md5s.entrySet()) {
+				output.add(m.getKey() + " " + m.getValue().getMD5());
+				if (!m.getValue().equals(jMD5)) {
+					good = false;
+				}
+			}
+			final Path out;
+			if (good) {
+				out = d.resolve(outputPrefix + ".md5.good.txt");
+			} else {
+				System.out.println("Sort correctness failed for " + ref);
+				out = d.resolve(outputPrefix + ".md5.bad.txt"); 
+			}
+			Files.write(out, output, Charset.forName("UTF-8"));
+		}
+		
+		
+		
 		int numSorts = SIZE_CUTOFFS.get(0).get(NUM_SORTS_POS);
 		int interval = SIZE_CUTOFFS.get(0).get(INTERVAL_POS);
 		for (Entry<Integer, List<Integer>> sz: SIZE_CUTOFFS.entrySet()) {
@@ -198,11 +236,11 @@ public class MeasureSortRunner {
 			}
 		}
 
-		System.out.println(String.format("Recording memory usage for %s, %sB, sorts: %s, interval: %s, %s",
-				ref, info.getE10(), numSorts, interval, new Date()));
+		System.out.println(String.format("Recording memory usage. Sorts: %s, interval: %s, %s",
+				numSorts, interval, new Date()));
 		measureSorterMemUsage(numSorts, interval, input, title, d, outputPrefix + ".memresults");
 		
-		System.out.println("Recording speed for " + ref + " " + new Date());
+		System.out.println("Recording sort speed. " + new Date());
 		measureSorterSpeed(numSorts, input, title,
 				d.resolve(outputPrefix +  ".speed.txt"));
 		
