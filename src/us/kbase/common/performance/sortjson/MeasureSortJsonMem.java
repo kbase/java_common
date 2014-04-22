@@ -1,8 +1,11 @@
 package us.kbase.common.performance.sortjson;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -43,6 +46,7 @@ public class MeasureSortJsonMem {
 		final int interval;
 		final File file;
 		final String sorter;
+		final Writer output;
 		if (args.length < 1) {
 			System.out.println("started: " + new Date());
 			System.out.println("max mem: " + Runtime.getRuntime().maxMemory());
@@ -54,11 +58,13 @@ public class MeasureSortJsonMem {
 			interval = TIME_INTERVAL;
 			file = FILE;
 			sorter = SORTER;
+			output = new OutputStreamWriter(System.out);
 		} else {
 			numSorts = Integer.parseInt(args[0]);
 			interval = Integer.parseInt(args[1]);
 			file = new File(args[2]);
 			sorter = args[3];
+			output = new FileWriter(new File(args[4]));
 		}
 		
 //		System.err.println("Java version: " + System.getProperty("java.version"));
@@ -69,13 +75,15 @@ public class MeasureSortJsonMem {
 				numSorts);
 		
 		if (args.length < 1) {
-			System.out.println("Complete: " + new Date());
-			System.out.println(SORTER);
+			output.write("Complete: " + new Date() + "\n");
+			output.write(SORTER + "\n");
 		}
 		
 		for (int i = 0; i < mem.size(); i++) {
-			System.out.println(mem.get(i) / 1000000.0);
+			output.write(mem.get(i) / 1000000.0 + "\n");
 		}
+		
+		output.close();
 	}
 	
 	private static List<Long> recordMemory(int gcTimeInterval,

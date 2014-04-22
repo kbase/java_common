@@ -3,6 +3,8 @@ package us.kbase.common.performance.sortjson;
 import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -368,22 +370,24 @@ public class MeasureSortRunner {
 	private static List<Double> runMeasureSort(int numSorts,
 			int interval, Path file, String sorter) throws IOException,
 			InterruptedException {
+		File tempfile = File.createTempFile("MeasureSortRunner", null);
+		tempfile.deleteOnExit();
 		Process p = new ProcessBuilder(new String [] {
 					"java", "-Xmx" + MEM_XMX, "-cp", CLASSPATH, MEAS_CLASS_FILE,
 					Integer.toString(numSorts), Integer.toString(interval),
-					file.toString(), sorter
+					file.toString(), sorter, tempfile.getAbsolutePath()
 					}).start();
 		List<Double> mem = new ArrayList<Double>();
-		BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
-		finishProcess(p, "Run failed"); //dangerous, could deadlock here - may need to change
-		while (true) { 
-			String l = br.readLine();
-			if (l == null) break;
+		finishProcess(p, "Run failed");
+		BufferedReader br = new BufferedReader(new FileReader(tempfile));
+		String l = br.readLine();
+		while (l != null) { 
 			mem.add(Double.parseDouble(l));
+			l = br.readLine();
 		}
 		br.close();
 		BufferedReader err = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-		String l = err.readLine();
+		l = err.readLine();
 		if (l != null) {
 			System.out.println("Sort measurer STDERR:");
 		}
