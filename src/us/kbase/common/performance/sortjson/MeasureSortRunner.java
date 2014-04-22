@@ -56,7 +56,9 @@ public class MeasureSortRunner {
 	final static int NUM_OBJECTS_TO_TEST = 0;
 	//random tester won't use objects below this size
 	final static int MIN_SIZE_B = 1000000;
-	final static boolean CHECK_SORT_CORRECTNESS = true;
+	//set the max memory used by the memory recorder
+	final static String MEM_XMX = "1G";
+	final static boolean CHECK_SORT_CORRECTNESS = false;
 	
 	final static List<ObjectIdentity> TEST_OBJECTS =
 			new ArrayList<ObjectIdentity>();
@@ -367,7 +369,7 @@ public class MeasureSortRunner {
 			int interval, Path file, String sorter) throws IOException,
 			InterruptedException {
 		Process p = new ProcessBuilder(new String [] {
-					"java", "-cp", CLASSPATH, MEAS_CLASS_FILE,
+					"java", "-Xmx" + MEM_XMX, "-cp", CLASSPATH, MEAS_CLASS_FILE,
 					Integer.toString(numSorts), Integer.toString(interval),
 					file.toString(), sorter
 					}).start();
