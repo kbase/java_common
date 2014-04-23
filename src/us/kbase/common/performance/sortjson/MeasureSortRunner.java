@@ -55,29 +55,29 @@ public class MeasureSortRunner {
 	
 	final static Path OUTPUT_DIR = Paths.get(".");
 	//set to 0 or less to use pre chosen test objects below
-	final static int NUM_OBJECTS_TO_TEST = 0;
+	final static int NUM_OBJECTS_TO_TEST = 1000;
 	//random tester won't use objects below this size
-	final static int MIN_SIZE_B = 1000000;
+	final static int MIN_SIZE_B = 0;
 	//set the max memory used by the memory recorder
-	final static String MEM_XMX = "1G";
-	final static boolean CHECK_SORT_CORRECTNESS = false;
+	final static String MEM_XMX = "5G";
+	final static boolean CHECK_SORT_CORRECTNESS = true;
 	
 	final static List<ObjectIdentity> TEST_OBJECTS =
 			new ArrayList<ObjectIdentity>();
 	static {
 		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/35"));
 		TEST_OBJECTS.add(new ObjectIdentity().withRef("637/308"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/1"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/2"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/3"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/1"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/2"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/3"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/4"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/5"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/6"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/7"));
-		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/8"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/1"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/2"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("970/3"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/1"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/2"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/3"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/4"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/5"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/6"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/7"));
+//		TEST_OBJECTS.add(new ObjectIdentity().withRef("1267/8"));
 //		TEST_OBJECTS.add(new ObjectIdentity().withRef("1200/MinimalMedia"));
 	}
 	
@@ -156,7 +156,8 @@ public class MeasureSortRunner {
 			for (ObjectIdentity oi: TEST_OBJECTS) {
 				System.out.println(String.format("Testing object %s of %s",
 						count++, TEST_OBJECTS.size()));
-				measureObjectMemAndSpeed(OUTPUT_DIR, oi);
+				ObjectData data = ws.getObjects(Arrays.asList(oi)).get(0);
+				measureObjectMemAndSpeed(OUTPUT_DIR, data);
 			}
 		} else {
 			Random r = new Random();
@@ -164,12 +165,29 @@ public class MeasureSortRunner {
 			for (int i = 0; i < NUM_OBJECTS_TO_TEST; i++) {
 				System.out.println(String.format("Testing object %s of %s",
 						i + 1, NUM_OBJECTS_TO_TEST));
-				ObjectIdentity oi = getRandomObject(seenObjs, r);
-				measureObjectMemAndSpeed(OUTPUT_DIR, oi);
+				ObjectIdentity oi = getRandomObjectWithRetries(seenObjs, r);
+				ObjectData d = getDataWithRetries(oi);
+				measureObjectMemAndSpeed(OUTPUT_DIR, d);
 			}
 		}
 	}
 
+	private static ObjectIdentity getRandomObjectWithRetries(Set<String> seenObjs, Random rand) {
+		ObjectIdentity oi = null;
+		int count = 0;
+		while (oi == null) {
+			try {
+				oi = getRandomObject(seenObjs, rand);
+			} catch (Exception e) {
+				System.out.println(e);
+				count++;
+			}
+			if (count > 10) {
+				System.exit(1);
+			}
+		}
+		return oi;
+	}
 	private static ObjectIdentity getRandomObject(Set<String> seenObjs, Random rand)
 			throws Exception {
 		ObjectIdentity good = null;
@@ -196,11 +214,27 @@ public class MeasureSortRunner {
 		}
 		return good;
 	}
+	
+	private static ObjectData getDataWithRetries(ObjectIdentity oi){
+		ObjectData data = null;
+		int count = 0;
+		while (data == null) {
+			try {
+				data = ws.getObjects(Arrays.asList(oi)).get(0);
+			} catch (Exception e) {
+				count++;
+				System.out.println(e);
+			}
+			if (count > 10) {
+				System.exit(1);
+			}
+		}
+		return data;
+	}
 
-	private static void measureObjectMemAndSpeed(Path dir, ObjectIdentity oi)
+	private static void measureObjectMemAndSpeed(Path dir, ObjectData data)
 			throws Exception {
 		
-		ObjectData data = ws.getObjects(Arrays.asList(oi)).get(0);
 		Tuple11<Long, String, String, String, Long, String, Long, String, String, Long, Map<String, String>>
 				info = data.getInfo();
 		String ref = info.getE7() + "/" + info.getE1() + "/" + info.getE5();

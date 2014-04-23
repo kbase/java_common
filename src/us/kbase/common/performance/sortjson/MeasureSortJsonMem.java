@@ -68,8 +68,8 @@ public class MeasureSortJsonMem {
 		}
 		
 //		System.err.println("Java version: " + System.getProperty("java.version"));
-		System.err.println("Mem: total: " + Runtime.getRuntime().totalMemory() + 
-				" max: " + Runtime.getRuntime().maxMemory());
+//		System.err.println("Mem: total: " + Runtime.getRuntime().totalMemory() + 
+//				" max: " + Runtime.getRuntime().maxMemory());
 		
 		List<Long> mem = recordMemory(interval, SORTERS.get(sorter), file,
 				numSorts);
