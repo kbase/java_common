@@ -1,9 +1,10 @@
 package us.kbase.common.performance.sortjson;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.util.Arrays;
@@ -19,7 +20,7 @@ import us.kbase.common.performance.PerformanceMeasurement;
 import us.kbase.common.utils.sortjson.SortedKeysJsonBytes;
 import us.kbase.common.utils.sortjson.SortedKeysJsonFile;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
+//import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -39,36 +40,48 @@ public class MeasureSortJsonSpeed {
 	final static File FILE = new File("src/us/kbase/common/performance/sortjson/83333.2.txt");
 	
 	public static void main(String[] args) throws Exception {
-		System.out.println("started: " + new Date());
-		System.out.println("max mem: " + Runtime.getRuntime().maxMemory());
-		System.out.println("file: " + FILE);
+		final int numSorts;
+		final File file;
+		final Writer output;
+		if (args.length < 1) {
+			System.out.println("started: " + new Date());
+			System.out.println("max mem: " + Runtime.getRuntime().maxMemory());
+			System.out.println("file: " + FILE);
+			System.out.println("size: " + FILE.length());
+			numSorts = NUM_SORTS;
+			file = FILE;
+			output = new OutputStreamWriter(System.out);
+		} else {
+			numSorts = Integer.parseInt(args[0]);
+			file = new File(args[1]);
+			output = new FileWriter(new File(args[2]));
+		}
 		
-		System.out.println("size: " + FILE.length());
-		byte[] b = Files.readAllBytes(FILE.toPath());
+		byte[] b = Files.readAllBytes(file.toPath());
 		if (PAUSE_FOR_PROFILER) {
 			System.out.println("File read into bytes[]. Start profiler, then hit enter to continue");
 			Scanner s = new Scanner(System.in);
 			s.nextLine();
 		}
-		System.out.println("Starting tests");
+		if (args.length < 1) {
+			System.out.println("Starting tests");
+		}
 		
-		File f = FILE;
-		int sorts = NUM_SORTS;
-		
-		PerformanceMeasurement js = measureJsonSort(b, sorts);
+		PerformanceMeasurement js = measureJsonSort(b, numSorts);
 
-		PerformanceMeasurement skjb = measureSKJBSort(b, sorts);
+		PerformanceMeasurement skjb = measureSKJBSort(b, numSorts);
 
-		PerformanceMeasurement skjfb = measureSKJFSort(b, sorts);
+		PerformanceMeasurement skjfb = measureSKJFSort(b, numSorts);
 
 		b = null;
-		PerformanceMeasurement skjff = measureSKJFSort(f, sorts);
+		PerformanceMeasurement skjff = measureSKJFSort(file, numSorts);
 
-		System.out.println("Complete: " + new Date());
+		if (args.length < 1) {
+			System.out.println("Complete: " + new Date());
+		}
 		
-		Writer stdout = new PrintWriter(System.out);
-		renderResults(Arrays.asList(js, skjb, skjfb, skjff), stdout);
-		stdout.close();
+		renderResults(Arrays.asList(js, skjb, skjfb, skjff), output);
+		output.close();
 	}
 	
 	static void renderResults(List<PerformanceMeasurement> pms, Writer w)
@@ -88,6 +101,7 @@ public class MeasureSortJsonSpeed {
 		w.write(tbl.render());
 	}
 
+	@SuppressWarnings("unused")
 	private static PerformanceMeasurement measureSKJFSortStringKeys(byte[] b, int sorts)
 			throws Exception {
 		List<Long> m = new LinkedList<Long>();
