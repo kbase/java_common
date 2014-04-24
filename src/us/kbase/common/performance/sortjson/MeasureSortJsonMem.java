@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -70,6 +72,14 @@ public class MeasureSortJsonMem {
 //		System.err.println("Java version: " + System.getProperty("java.version"));
 //		System.err.println("Mem: total: " + Runtime.getRuntime().totalMemory() + 
 //				" max: " + Runtime.getRuntime().maxMemory());
+		
+//		for (GarbageCollectorMXBean g: ManagementFactory.getGarbageCollectorMXBeans()) {
+//			System.err.println(g.getName() + " - Valid: " + g.isValid());
+//			String[] m = g.getMemoryPoolNames();
+//			for (int i = 0; i < m.length; i++) {
+//				System.err.println("\t" + m[i]);
+//			}
+//		}
 		
 		List<Long> mem = recordMemory(interval, SORTERS.get(sorter), file,
 				numSorts);

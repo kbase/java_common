@@ -55,12 +55,13 @@ public class MeasureSortRunner {
 	
 	final static Path OUTPUT_DIR = Paths.get(".");
 	//set to 0 or less to use pre chosen test objects below
-	final static int NUM_OBJECTS_TO_TEST = 1000;
+	final static int NUM_OBJECTS_TO_TEST = 0;
 	//random tester won't use objects below this size
 	final static int MIN_SIZE_B = 0;
 	//set the max memory used by the memory recorder
 	final static String MEM_XMX = "5G";
-	final static boolean CHECK_SORT_CORRECTNESS = true;
+	final static boolean CHECK_SORT_CORRECTNESS = false;
+	final static boolean DONT_USE_PARALLEL_GC = true;
 	
 	final static List<ObjectIdentity> TEST_OBJECTS =
 			new ArrayList<ObjectIdentity>();
@@ -406,11 +407,15 @@ public class MeasureSortRunner {
 			InterruptedException {
 		File tempfile = File.createTempFile("MeasureSortRunner", null);
 		tempfile.deleteOnExit();
-		Process p = new ProcessBuilder(new String [] {
-					"java", "-Xmx" + MEM_XMX, "-cp", CLASSPATH, MEAS_CLASS_FILE,
+		List<String> cmd = new ArrayList<String>();
+		cmd.add("java");
+		if (DONT_USE_PARALLEL_GC) {
+			cmd.add("-XX:-UseParallelGC");
+		}
+		cmd.addAll(Arrays.asList("-Xmx" + MEM_XMX, "-cp", CLASSPATH, MEAS_CLASS_FILE,
 					Integer.toString(numSorts), Integer.toString(interval),
-					file.toString(), sorter, tempfile.getAbsolutePath()
-					}).start();
+					file.toString(), sorter, tempfile.getAbsolutePath()));
+		Process p = new ProcessBuilder(cmd).start();
 		List<Double> mem = new ArrayList<Double>();
 		finishProcess(p, "Run failed");
 		BufferedReader br = new BufferedReader(new FileReader(tempfile));
