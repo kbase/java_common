@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+//import java.lang.management.GarbageCollectorMXBean;
+//import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Date;
@@ -54,6 +56,7 @@ public class MeasureSortJsonSpeed {
 		} else {
 			numSorts = Integer.parseInt(args[0]);
 			file = new File(args[1]);
+			file.createNewFile();
 			output = new FileWriter(new File(args[2]));
 		}
 		
@@ -66,6 +69,18 @@ public class MeasureSortJsonSpeed {
 		if (args.length < 1) {
 			System.out.println("Starting tests");
 		}
+		
+//		System.err.println("Java version: " + System.getProperty("java.version"));
+//		System.err.println("Mem: total: " + Runtime.getRuntime().totalMemory() + 
+//				" max: " + Runtime.getRuntime().maxMemory());
+//		
+//		for (GarbageCollectorMXBean g: ManagementFactory.getGarbageCollectorMXBeans()) {
+//			System.err.println(g.getName() + " - Valid: " + g.isValid());
+//			String[] m = g.getMemoryPoolNames();
+//			for (int i = 0; i < m.length; i++) {
+//				System.err.println("\t" + m[i]);
+//			}
+//		}
 		
 		PerformanceMeasurement js = measureJsonSort(b, numSorts);
 

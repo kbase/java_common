@@ -38,7 +38,6 @@ import org.jfree.chart.title.LegendTitle;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
-import us.kbase.common.performance.PerformanceMeasurement;
 import us.kbase.common.service.Tuple11;
 import us.kbase.common.service.Tuple9;
 import us.kbase.common.utils.MD5;
@@ -59,7 +58,7 @@ public class MeasureSortRunner {
 	//random tester won't use objects below this size
 	final static int MIN_SIZE_B = 0;
 	//set the max memory used by the memory recorder
-	final static String MEM_XMX = "5G";
+	final static String MEM_XMX = "1G";
 	final static boolean CHECK_SORT_CORRECTNESS = false;
 	final static boolean DONT_USE_PARALLEL_GC = true;
 	
@@ -98,6 +97,7 @@ public class MeasureSortRunner {
 		JARS.add("../jars/lib/jars/jackson/jackson-annotations-2.2.3.jar");
 		JARS.add("../jars/lib/jars/jackson/jackson-core-2.2.3.jar");
 		JARS.add("../jars/lib/jars/jackson/jackson-databind-2.2.3.jar");
+		JARS.add("../jars/lib/jars/texttable/text-table-formatter-1.1.1.jar");
 	}
 	final static String CODE_ROOT = "src";
 	final static String CLASSPATH;
@@ -111,9 +111,13 @@ public class MeasureSortRunner {
 	
 	final static String MEAS_CLASS_FILE =
 			"us.kbase.common.performance.sortjson.MeasureSortJsonMem";
+	final static String SORT_CLASS_FILE =
+			"us.kbase.common.performance.sortjson.MeasureSortJsonSpeed";
 	
 	final static String MEAS_JAVA_FILE =
 			CODE_ROOT + "/" + MEAS_CLASS_FILE.replace(".", "/");
+	final static String SORT_JAVA_FILE =
+			CODE_ROOT + "/" + SORT_CLASS_FILE.replace(".", "/");
 	
 	private static final int NUM_SORTS_POS = 0;
 	private static final int INTERVAL_POS = 1;
@@ -146,7 +150,17 @@ public class MeasureSortRunner {
 			}
 		}
 		
-		compileMeasureSort();
+		System.out.println("For called memory usage and sort speed programs, using parameters:");
+		System.out.println("-Xmx" + MEM_XMX);
+		if (DONT_USE_PARALLEL_GC) {
+			System.out.println("Using serial GC");
+		} else {
+			System.out.println("Using parallel GC");
+		}
+		System.out.println();
+		
+		compileMeasureSort(MEAS_JAVA_FILE);
+		compileMeasureSort(SORT_JAVA_FILE);
 		
 		ws = new WorkspaceClient(new URL(WORKSPACE_URL));
 		
@@ -305,22 +319,27 @@ public class MeasureSortRunner {
 	private static void measureSorterSpeed(int numSorts, Path input,
 			String title, Path output) throws Exception {
 		
-		byte[] b = Files.readAllBytes(input);
-		
-		PerformanceMeasurement js = MeasureSortJsonSpeed.measureJsonSort(b, numSorts);
-
-		PerformanceMeasurement skjb = MeasureSortJsonSpeed.measureSKJBSort(b, numSorts);
-
-		PerformanceMeasurement skjfb = MeasureSortJsonSpeed.measureSKJFSort(b, numSorts);
-
-		b = null;
-		PerformanceMeasurement skjff = MeasureSortJsonSpeed.measureSKJFSort(input.toFile(), numSorts);
-		
-		BufferedWriter bw = Files.newBufferedWriter(output, Charset.forName("UTF-8"));
-		bw.write(title + String.format(" Size (MB): %,.2f",
-				input.toFile().length() / 1000000.0) + "\n");
-		MeasureSortJsonSpeed.renderResults(Arrays.asList(js, skjb, skjfb, skjff), bw);
-		bw.close();
+		List<String> cmd = new ArrayList<String>();
+		cmd.add("java");
+		if (DONT_USE_PARALLEL_GC) {
+			cmd.add("-XX:-UseParallelGC");
+		}
+		cmd.addAll(Arrays.asList("-Xmx" + MEM_XMX, "-cp", CLASSPATH, SORT_CLASS_FILE,
+					Integer.toString(numSorts), input.toString(),
+					output.toFile().getAbsolutePath()));
+		Process p = new ProcessBuilder(cmd).start();
+		finishProcess(p, "Sort run failed");
+		BufferedReader err = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+		String l = err.readLine();
+		if (l != null) {
+			System.out.println("Sort measurer STDERR:");
+		}
+		while (l != null) { 
+			System.out.println(l);
+			l = err.readLine();
+		}
+		err.close();
+		p.destroy();
 	}
 
 	private static void measureSorterMemUsage(int numSorts, int interval,
@@ -417,7 +436,7 @@ public class MeasureSortRunner {
 					file.toString(), sorter, tempfile.getAbsolutePath()));
 		Process p = new ProcessBuilder(cmd).start();
 		List<Double> mem = new ArrayList<Double>();
-		finishProcess(p, "Run failed");
+		finishProcess(p, "Memory run failed");
 		BufferedReader br = new BufferedReader(new FileReader(tempfile));
 		String l = br.readLine();
 		while (l != null) { 
@@ -439,10 +458,10 @@ public class MeasureSortRunner {
 		return mem;
 	}
 
-	private static void compileMeasureSort()
+	private static void compileMeasureSort(String javaFile)
 			throws IOException, InterruptedException {
 		Process p = new ProcessBuilder(new String[] {
-				"javac", "-cp", CLASSPATH, MEAS_JAVA_FILE + ".java"}).start();
+				"javac", "-cp", CLASSPATH, javaFile + ".java"}).start();
 		finishProcess(p, "Compile failed"); //dangerous, could deadlock here - may need to change
 		p.destroy();
 	}
