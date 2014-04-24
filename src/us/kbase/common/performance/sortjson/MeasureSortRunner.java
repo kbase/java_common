@@ -18,6 +18,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,7 +61,8 @@ public class MeasureSortRunner {
 	//set the max memory used by the memory recorder
 	final static String MEM_XMX = "1G";
 	final static boolean CHECK_SORT_CORRECTNESS = false;
-	final static boolean DONT_USE_PARALLEL_GC = true;
+	final static boolean DONT_USE_PARALLEL_GC = false;
+	final static boolean SKIP_MEM_MEAS = true;
 	
 	final static List<ObjectIdentity> TEST_OBJECTS =
 			new ArrayList<ObjectIdentity>();
@@ -90,6 +92,14 @@ public class MeasureSortRunner {
 		SORTERS.add("SortedJsonBytes");
 		SORTERS.add("SortedJsonFile-bytes");
 		SORTERS.add("SortedJsonFile-file");
+	}
+	
+	final static Map<String, String> SPEED_NOMENCLATURE_MAP = new HashMap<String, String>();
+	static {
+		SPEED_NOMENCLATURE_MAP.put("Jackson", "Jackson");
+		SPEED_NOMENCLATURE_MAP.put("SortedJsonBytes", "Structural");
+		SPEED_NOMENCLATURE_MAP.put("SortedJsonFile-bytes", "Byte");
+		SPEED_NOMENCLATURE_MAP.put("SortedJsonFile-file", "File");
 	}
 	
 	final static List<String> JARS = new ArrayList<String>();
@@ -303,12 +313,15 @@ public class MeasureSortRunner {
 				break;
 			}
 		}
-
-		System.out.println(String.format("Recording memory usage. Sorts: %s, interval: %s, %s",
-				numSorts, interval, new Date()));
-		measureSorterMemUsage(numSorts, interval, input, title, d, outputPrefix + ".memresults");
 		
-		System.out.println("Recording sort speed. " + new Date());
+		if (!SKIP_MEM_MEAS) {
+			System.out.println(String.format("Recording memory usage. Sorts: %s, interval: %s, %s",
+					numSorts, interval, new Date()));
+			measureSorterMemUsage(numSorts, interval, input, title, d, outputPrefix + ".memresults");
+		}
+		
+		System.out.println(String.format("Recording sort speed. Sorts: %s, interval: %s, %s",
+				numSorts, interval, new Date()));
 		measureSorterSpeed(numSorts, input, title,
 				d.resolve(outputPrefix +  ".speed.txt"));
 		
@@ -327,6 +340,9 @@ public class MeasureSortRunner {
 		cmd.addAll(Arrays.asList("-Xmx" + MEM_XMX, "-cp", CLASSPATH, SORT_CLASS_FILE,
 					Integer.toString(numSorts), input.toString(),
 					output.toFile().getAbsolutePath()));
+		for (String s: SORTERS) {
+			cmd.add(SPEED_NOMENCLATURE_MAP.get(s));
+		}
 		Process p = new ProcessBuilder(cmd).start();
 		finishProcess(p, "Sort run failed");
 		BufferedReader err = new BufferedReader(new InputStreamReader(p.getErrorStream()));

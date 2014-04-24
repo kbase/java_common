@@ -9,12 +9,15 @@ import java.io.Writer;
 //import java.lang.management.GarbageCollectorMXBean;
 //import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 
 import org.nocrala.tools.texttablefmt.Table;
 
@@ -40,11 +43,19 @@ public class MeasureSortJsonSpeed {
 	final static boolean PAUSE_FOR_PROFILER = false;
 	final static int NUM_SORTS = 5000;
 	final static File FILE = new File("src/us/kbase/common/performance/sortjson/83333.2.txt");
+
+	final static String JACKSON_SORT = "Jackson";
+	final static String STRUCTURAL_SORT = "Structural";
+	final static String BYTE_BYTE_SORT = "Byte";
+	final static String BYTE_FILE_SORT = "File";
+	final static List<String> ALL_SORTERS = Arrays.asList(
+			JACKSON_SORT, STRUCTURAL_SORT, BYTE_BYTE_SORT, BYTE_FILE_SORT);
 	
 	public static void main(String[] args) throws Exception {
 		final int numSorts;
 		final File file;
 		final Writer output;
+		final Set<String> sorters = new HashSet<String>();
 		if (args.length < 1) {
 			System.out.println("started: " + new Date());
 			System.out.println("max mem: " + Runtime.getRuntime().maxMemory());
@@ -53,11 +64,18 @@ public class MeasureSortJsonSpeed {
 			numSorts = NUM_SORTS;
 			file = FILE;
 			output = new OutputStreamWriter(System.out);
+			sorters.addAll(ALL_SORTERS);
 		} else {
 			numSorts = Integer.parseInt(args[0]);
 			file = new File(args[1]);
 			file.createNewFile();
 			output = new FileWriter(new File(args[2]));
+			for (int i = 3; i < args.length; i++) {
+				sorters.add(args[i]);
+			}
+			if (sorters.isEmpty()) {
+				sorters.addAll(ALL_SORTERS);
+			}
 		}
 		
 		byte[] b = Files.readAllBytes(file.toPath());
@@ -82,20 +100,26 @@ public class MeasureSortJsonSpeed {
 //			}
 //		}
 		
-		PerformanceMeasurement js = measureJsonSort(b, numSorts);
-
-		PerformanceMeasurement skjb = measureSKJBSort(b, numSorts);
-
-		PerformanceMeasurement skjfb = measureSKJFSort(b, numSorts);
-
+		List<PerformanceMeasurement> meas = new ArrayList<PerformanceMeasurement>();
+		if (sorters.contains(JACKSON_SORT)) {
+			meas.add(measureJsonSort(b, numSorts));
+		}
+		if (sorters.contains(STRUCTURAL_SORT)) {
+			meas.add(measureSKJBSort(b, numSorts));
+		}
+		if (sorters.contains(BYTE_BYTE_SORT)) {
+			meas.add(measureSKJFSort(b, numSorts));
+		}
 		b = null;
-		PerformanceMeasurement skjff = measureSKJFSort(file, numSorts);
+		if (sorters.contains(BYTE_FILE_SORT)) {
+			meas.add(measureSKJFSort(file, numSorts));
+		}
 
 		if (args.length < 1) {
 			System.out.println("Complete: " + new Date());
 		}
 		
-		renderResults(Arrays.asList(js, skjb, skjfb, skjff), output);
+		renderResults(meas, output);
 		output.close();
 	}
 	
