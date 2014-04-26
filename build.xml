@@ -79,7 +79,9 @@
     <!-- Make main jar file-->
     <jar destfile="${jarfile}.jar" basedir="${classes}"/>
     <!-- Make sources jar file-->
-    <jar destfile="${jarfile}-sources.jar" basedir="${src}"/>
+    <jar destfile="${jarfile}-sources.jar" basedir="${src}">
+      <exclude name="us/kbase/common/performance/**"/>
+    </jar>
   </target>
 
   <target name="javadoc" depends="init" description="build javadocs">
