@@ -5,10 +5,15 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 //TODO this doc needs updating
@@ -30,6 +35,10 @@ public class SortedKeysJsonBytes {
 	private byte[] data;
 	private boolean skipKeyDuplication = false;
 	private static final int DEFAULT_LIST_INIT_SIZE = 4;
+	private boolean useCacheForKeys = false;
+	private int maxKeyCacheSize = 1000;
+	private int maxKeyLengthInCache = 100;
+	private int maxMapSizeForCache = 50;
 
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -60,6 +69,42 @@ public class SortedKeysJsonBytes {
 		return this;
 	}
 
+	public boolean isUseCacheForKeys() {
+		return useCacheForKeys;
+	}
+	
+	public SortedKeysJsonBytes setUseCacheForKeys(boolean useCacheForKeys) {
+		this.useCacheForKeys = useCacheForKeys;
+		return this;
+	}
+	
+	public int getMaxKeyCacheSize() {
+		return maxKeyCacheSize;
+	}
+	
+	public SortedKeysJsonBytes setMaxKeyCacheSize(int maxKeyCacheSize) {
+		this.maxKeyCacheSize = maxKeyCacheSize;
+		return this;
+	}
+	
+	public int getMaxKeyLengthInCache() {
+		return maxKeyLengthInCache;
+	}
+	
+	public SortedKeysJsonBytes setMaxKeyLengthInCache(int maxKeyLengthInCache) {
+		this.maxKeyLengthInCache = maxKeyLengthInCache;
+		return this;
+	}
+	
+	public int getMaxMapSizeForCache() {
+		return maxMapSizeForCache;
+	}
+	
+	public SortedKeysJsonBytes setMaxMapSizeForCache(int maxMapSizeForCache) {
+		this.maxMapSizeForCache = maxMapSizeForCache;
+		return this;
+	}
+	
 	/**
 	 * Method saves sorted data into output stream. It doesn't close internal input stream.
 	 * So please call close() after calling this method. 
@@ -73,7 +118,10 @@ public class SortedKeysJsonBytes {
 			throws IOException, KeyDuplicationException {
 		int[] pos = {0};
 		List<Object> path = new ArrayList<Object>();
-		JsonElement root = searchForElement(pos, path);
+		KeyBytesCache cache = null;
+		if (useCacheForKeys)
+			cache = new KeyBytesCache(maxKeyCacheSize, maxKeyLengthInCache);
+		JsonElement root = searchForElement(pos, path, cache);
 		UnthreadedBufferedOutputStream ubos = new UnthreadedBufferedOutputStream(os, 100000);
 		root.write(data, ubos);
 		ubos.flush();
@@ -99,7 +147,7 @@ public class SortedKeysJsonBytes {
 		return sb.toString();
 	}
 
-	private JsonElement searchForElement(int[] pos, List<Object> path) 
+	private JsonElement searchForElement(int[] pos, List<Object> path, KeyBytesCache cache) 
 			throws IOException, KeyDuplicationException {
 		int b = -1;
 		while (true) {
@@ -110,13 +158,13 @@ public class SortedKeysJsonBytes {
 				break;
 		}
 		if (b == '{') {
-			return searchForMapCloseBracket(pos, path);
+			return searchForMapCloseBracket(pos, path, cache);
 		} else if (b == '[') {
-			return searchForArrayCloseBracket(pos, path);
+			return searchForArrayCloseBracket(pos, path, cache);
 		} else {
 			int start = pos[0] - 1;
 			if (b == '\"') {
-				searchForEndQuot(pos, false);
+				searchForEndQuot(pos, false, cache);
 			} else {
 				while (true) {
 					if (pos[0] >= data.length)
@@ -134,12 +182,13 @@ public class SortedKeysJsonBytes {
 	}
 
 	
-	private JsonMapElement searchForMapCloseBracket(int[] pos, List<Object> path) 
+	private JsonMapElement searchForMapCloseBracket(int[] pos, List<Object> path, KeyBytesCache cache) 
 			throws IOException, KeyDuplicationException {
 		List<KeyValueLocation> ret =
 				new ArrayList<KeyValueLocation>(DEFAULT_LIST_INIT_SIZE);
+		List<KeyBytes> keysForCaching = null;
 		boolean isBeforeField = true;
-		String currentKey = null;
+		KeyBytes currentKey = null;
 		int currentKeyStart = -1;
 		int currentKeyStop = -1;
 		JsonElement currentValue = null;
@@ -152,7 +201,12 @@ public class SortedKeysJsonBytes {
 				if (currentKey != null) {
 					if (currentKeyStart < 0 || currentKeyStop < 0)
 						throw new IOException("Value without key in mapping");
-					ret.add(new KeyValueLocation(currentKey,currentKeyStart, currentKeyStop, currentValue));
+					if (currentKey.parsed == null && cache != null && ret.size() < maxMapSizeForCache) {
+						if (keysForCaching == null)
+							keysForCaching = new ArrayList<KeyBytes>(DEFAULT_LIST_INIT_SIZE);							
+						keysForCaching.add(currentKey);
+					}
+					ret.add(new KeyValueLocation(currentKey.parse(), currentKeyStart, currentKeyStop, currentValue));
 					currentKey = null;
 					currentKeyStart = -1;
 					currentKeyStop = -1;
@@ -162,7 +216,7 @@ public class SortedKeysJsonBytes {
 			} else if (b == '"') {
 				if (isBeforeField) {
 					currentKeyStart = pos[0] - 1;
-					currentKey = searchForEndQuot(pos, true);
+					currentKey = searchForEndQuot(pos, true, cache);
 					currentKeyStop = pos[0] - 1;
 				} else {
 					throw new IllegalStateException();
@@ -171,14 +225,19 @@ public class SortedKeysJsonBytes {
 				if (!isBeforeField)
 					throw new IOException("Unexpected colon sign in the middle of value text");
 				path.set(path.size() - 1, currentKey);
-				currentValue = searchForElement(pos, path);
+				currentValue = searchForElement(pos, path, cache);
 				isBeforeField = false;
 			} else if (b == ',') {
 					if (currentKey == null)
 						throw new IOException("Comma in mapping without key-value pair before");
 					if (currentKeyStart < 0 || currentKeyStop < 0)
 						throw new IOException("Value without key in mapping");
-					ret.add(new KeyValueLocation(currentKey, currentKeyStart, currentKeyStop, currentValue));
+					if (currentKey.parsed == null && cache != null && ret.size() < maxMapSizeForCache) {
+						if (keysForCaching == null)
+							keysForCaching = new ArrayList<KeyBytes>(DEFAULT_LIST_INIT_SIZE);							
+						keysForCaching.add(currentKey);
+					}
+					ret.add(new KeyValueLocation(currentKey.parse(), currentKeyStart, currentKeyStop, currentValue));
 					currentKey = null;
 					currentKeyStart = -1;
 					currentKeyStop = -1;
@@ -203,10 +262,13 @@ public class SortedKeysJsonBytes {
 			}
 			prevKey = key;
 		}
+		if (keysForCaching != null && ret.size() <= maxMapSizeForCache)
+			for (KeyBytes key : keysForCaching)
+				cache.add(key);
 		return new JsonMapElement(ret);
 	}
 
-	private JsonArrayElement searchForArrayCloseBracket(int[] pos, List<Object> path) 
+	private JsonArrayElement searchForArrayCloseBracket(int[] pos, List<Object> path, KeyBytesCache cache) 
 			throws IOException, KeyDuplicationException {
 		List<JsonElement> items =
 				new ArrayList<JsonElement>(DEFAULT_LIST_INIT_SIZE);
@@ -217,7 +279,7 @@ public class SortedKeysJsonBytes {
 			pos[0]--;
 			path.add(0);
 			while (true) {
-				items.add(searchForElement(pos, path));
+				items.add(searchForElement(pos, path, cache));
 				if (pos[0] >= data.length)
 					throw new IOException("Array close bracket wasn't found");
 				while (true) {
@@ -240,7 +302,7 @@ public class SortedKeysJsonBytes {
 		return new JsonArrayElement(items);
 	}
 
-	private String searchForEndQuot(int[] pos, boolean createString) throws IOException {
+	private KeyBytes searchForEndQuot(int[] pos, boolean createString, KeyBytesCache cache) throws IOException {
 		int start = pos[0] - 1;
 		while (true) {
 			if (pos[0] >= data.length)
@@ -254,8 +316,12 @@ public class SortedKeysJsonBytes {
 				b = data[pos[0]++] & 0xff;
 			}
 		}
-		if (createString)
-			return MAPPER.readValue(data, start, pos[0], String.class);
+		if (createString) {
+			KeyBytes ret = new KeyBytes(data, start, pos[0]);
+			if (cache != null)
+				ret = cache.lookup(ret);
+			return ret;
+		}
 		return null;
 	}
 
@@ -393,6 +459,104 @@ public class SortedKeysJsonBytes {
 
 		public void close() throws IOException {
 			flush();
+		}
+	}
+	
+	private static class KeyBytesCache {
+		Map<Long, Map<Integer, TreeMap<KeyBytes, KeyBytes>>> hashToLenToData = 
+				new HashMap<Long, Map<Integer, TreeMap<KeyBytes, KeyBytes>>>();
+		int size = 0;
+		final int maxSize;
+		final int maxKeyLen;
+		
+		KeyBytesCache(int maxSize, int maxKeyLen) {
+			this.maxSize = maxSize;
+			this.maxKeyLen = maxKeyLen;
+		}
+		
+		KeyBytes lookup(KeyBytes value) {
+			if (value.length > maxKeyLen)
+				return value;
+			Map<Integer, TreeMap<KeyBytes, KeyBytes>> lenToData = hashToLenToData.get(value.hashCode);
+			if (lenToData == null)
+				return value;
+			TreeMap<KeyBytes, KeyBytes> data = lenToData.get(value.length);
+			KeyBytes ret = data.get(value);
+			return ret == null ? value : ret;
+		}
+		
+		void add(KeyBytes value) {
+			if (size >= maxSize || value.length > maxKeyLen)
+				return;
+			if (value.parsed == null)
+				throw new IllegalStateException("Internal error: parse string before adding into cache");
+			Map<Integer, TreeMap<KeyBytes, KeyBytes>> lenToData = hashToLenToData.get(value.hashCode);
+			if (lenToData == null) {
+				lenToData = new HashMap<Integer, TreeMap<KeyBytes, KeyBytes>>();
+				hashToLenToData.put(value.hashCode, lenToData);
+			}
+			TreeMap<KeyBytes, KeyBytes> data = lenToData.get(value.length);
+			if (data == null) {
+				data = new TreeMap<KeyBytes, KeyBytes>();
+				lenToData.put(value.length, data);
+			}
+			data.put(value, value);
+			size++;
+		}
+	}
+	
+	private static class KeyBytes implements Comparable<KeyBytes> {
+		byte[] arr;
+		int start;
+		int length;
+		long hashCode;
+		String parsed = null;
+		
+		KeyBytes(byte[] arr, int start, int stop) {
+			this.arr = arr;
+			this.start = start;
+			this.length = stop - start;
+			this.hashCode = hash(this.arr, this.start, this.length);
+		}
+		
+		public static long hash(byte[] arr, int start, int len) {
+			long h = 1125899906842597L;
+			for (int i = 0; i < len; i++) {
+				int val = arr[start + i] & 0xff;
+				h = 31 * h + val;
+			}
+			return h;
+		}
+		
+		public String parse() throws JsonParseException, JsonMappingException, IOException {
+			String ret = MAPPER.readValue(arr, start, start + length, String.class);
+			parsed = ret;
+			return ret;
+		}
+		
+		@Override
+		public int compareTo(KeyBytes o) {
+			if (length != o.length)
+				throw new IllegalStateException();
+	        int k = 0;
+	        while (k < length) {
+	            int c1 = arr[k] & 0xff;
+	            int c2 = o.arr[k] & 0xff;
+	            if (c1 != c2)
+	                return c1 - c2;
+	            k++;
+	        }
+	        return 0;
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (obj == null || !(obj instanceof KeyBytes))
+				return false;
+			KeyBytes o = (KeyBytes)obj;
+			if (hashCode != o.hashCode || length != o.length)
+				return false;
+			return compareTo(o) == 0;
 		}
 	}
 }

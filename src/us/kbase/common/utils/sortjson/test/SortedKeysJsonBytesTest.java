@@ -40,6 +40,11 @@ public class SortedKeysJsonBytesTest {
 		}
 	}
 
+	@Test
+	public void testKeyCaching() throws Exception {
+		sort("[{\"keyForFieldNumber1\":\"val1\",\"keyForFieldNumber2\":\"val1\",\"keyForFieldNumber3\":\"val1\",\"keyForFieldNumber4\":\"val1\",\"keyForFieldNumber5\":\"val1\"},{\"keyForFieldNumber1\":\"val2\"}]", false, true);
+	}
+	
 	private static void assertSort(String before, String after) {
 		try {
 			String actual = sort(before, true);
@@ -48,10 +53,15 @@ public class SortedKeysJsonBytesTest {
 			throw new IllegalStateException(e);
 		}
 	}
-	
+
 	private static String sort(String json, boolean skipDoubleKeys) throws Exception {
+		return sort(json, skipDoubleKeys, false);
+	}
+	
+	private static String sort(String json, boolean skipDoubleKeys, boolean cacheKeys) throws Exception {
 		Charset ch = Charset.forName("UTF-8");
 		byte[] data = json.getBytes(ch);
-		return new String(new SortedKeysJsonBytes(data).setSkipKeyDuplication(skipDoubleKeys).getSorted(), ch);
+		return new String(new SortedKeysJsonBytes(data).setSkipKeyDuplication(skipDoubleKeys)
+				.setUseCacheForKeys(cacheKeys).getSorted(), ch);
 	}
 }

@@ -30,7 +30,7 @@ public class RandomGenerationLongTest {
 		File tempFile = File.createTempFile("tmp_rnd", ".json", dir);
 		int maxSize = 0;
 		if (PRINT_TIMING) {
-			System.out.println("Test   Size (b) Gen (ms) Jackson (ms) Byte (ms) File (ms) Fast (ms)");
+			System.out.println("Test   Size (b) Gen (ms) Jackson (ms) Byte (ms) File (ms) Fast (ms) Cache (ms)");
 		}
 		for (int i = 0; i < 100; i++) {
 			long timeGener = System.currentTimeMillis();
@@ -59,6 +59,10 @@ public class RandomGenerationLongTest {
 			actualJson = sortWithByteSorter(unsortedJson);
 			timeFast = System.currentTimeMillis() - timeFast;
 			Assert.assertArrayEquals("i=" + i, expectedJson, actualJson);
+			long timeCache = System.currentTimeMillis();
+			actualJson = sortWithByteSorter(unsortedJson, true);
+			timeCache = System.currentTimeMillis() - timeCache;
+			Assert.assertArrayEquals("i=" + i, expectedJson, actualJson);
 			if (PRINT_TIMING) {
 				System.out.print(String.format("%4d ", i));
 				System.out.print(String.format("%10d   ", unsortedJson.length));
@@ -66,7 +70,8 @@ public class RandomGenerationLongTest {
 				System.out.print(String.format("%6d    ", timeJackson));
 				System.out.print(String.format("%6d    ", timeBytes));
 				System.out.print(String.format("%6d    ", timeFile));
-				System.out.print(String.format("%6d ", timeFast));
+				System.out.print(String.format("%6d    ", timeFast));
+				System.out.print(String.format("%6d ", timeCache));
 				System.out.println();
 			}
 		}
@@ -102,9 +107,13 @@ public class RandomGenerationLongTest {
 	}
 
 	private static byte[] sortWithByteSorter(byte[] data) throws Exception {
-		return new SortedKeysJsonBytes(data).getSorted();
+		return sortWithByteSorter(data, false);
 	}
-	
+
+	private static byte[] sortWithByteSorter(byte[] data, boolean cacheKeys) throws Exception {
+		return new SortedKeysJsonBytes(data).setUseCacheForKeys(cacheKeys).getSorted();
+	}
+
 	private static byte[] sortWithJackson(byte[] json) throws Exception {
 		ObjectMapper SORT_MAPPER = new ObjectMapper();
 		SORT_MAPPER.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
