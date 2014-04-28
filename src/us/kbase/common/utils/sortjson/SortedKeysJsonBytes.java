@@ -201,12 +201,7 @@ public class SortedKeysJsonBytes {
 				if (currentKey != null) {
 					if (currentKeyStart < 0 || currentKeyStop < 0)
 						throw new IOException("Value without key in mapping");
-					if (currentKey.parsed == null && cache != null && ret.size() < maxMapSizeForCache) {
-						if (keysForCaching == null)
-							keysForCaching = new ArrayList<KeyBytes>(DEFAULT_LIST_INIT_SIZE);							
-						keysForCaching.add(currentKey);
-					}
-					ret.add(new KeyValueLocation(currentKey.parse(), currentKeyStart, currentKeyStop, currentValue));
+					ret.add(new KeyValueLocation(currentKey.parsed, currentKeyStart, currentKeyStop, currentValue));
 					currentKey = null;
 					currentKeyStart = -1;
 					currentKeyStop = -1;
@@ -218,13 +213,21 @@ public class SortedKeysJsonBytes {
 					currentKeyStart = pos[0] - 1;
 					currentKey = searchForEndQuot(pos, true, cache);
 					currentKeyStop = pos[0] - 1;
+					if (currentKey.parsed == null) {
+						if (cache != null && ret.size() < maxMapSizeForCache) {
+							if (keysForCaching == null)
+								keysForCaching = new ArrayList<KeyBytes>(DEFAULT_LIST_INIT_SIZE);							
+							keysForCaching.add(currentKey);
+						}
+						currentKey.parse();
+					}
 				} else {
 					throw new IllegalStateException();
 				}
 			} else if (b == ':') {
 				if (!isBeforeField)
 					throw new IOException("Unexpected colon sign in the middle of value text");
-				path.set(path.size() - 1, currentKey);
+				path.set(path.size() - 1, currentKey.parsed);
 				currentValue = searchForElement(pos, path, cache);
 				isBeforeField = false;
 			} else if (b == ',') {
@@ -232,12 +235,7 @@ public class SortedKeysJsonBytes {
 						throw new IOException("Comma in mapping without key-value pair before");
 					if (currentKeyStart < 0 || currentKeyStop < 0)
 						throw new IOException("Value without key in mapping");
-					if (currentKey.parsed == null && cache != null && ret.size() < maxMapSizeForCache) {
-						if (keysForCaching == null)
-							keysForCaching = new ArrayList<KeyBytes>(DEFAULT_LIST_INIT_SIZE);							
-						keysForCaching.add(currentKey);
-					}
-					ret.add(new KeyValueLocation(currentKey.parse(), currentKeyStart, currentKeyStop, currentValue));
+					ret.add(new KeyValueLocation(currentKey.parsed, currentKeyStart, currentKeyStop, currentValue));
 					currentKey = null;
 					currentKeyStart = -1;
 					currentKeyStop = -1;
