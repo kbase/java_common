@@ -151,7 +151,12 @@ public class JsonTokenStream extends JsonParser {
 		} else if (data instanceof File) {
 			fdata = (File)data;
 			len = fdata.length();
-			encoding = detectEncoding(new FileInputStream(fdata));
+			FileInputStream is = new FileInputStream(fdata);
+			try {
+				encoding = detectEncoding(is);
+			} finally {
+				is.close();
+			}
 		} else if (data instanceof JsonNode) {
 			JsonNode jdata = (JsonNode)data;
 			sdata = UObject.transformJacksonToString(jdata); //TODO should this go to bytes instead?
