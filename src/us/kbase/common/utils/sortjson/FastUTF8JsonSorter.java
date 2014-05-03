@@ -61,8 +61,7 @@ public class FastUTF8JsonSorter {
 	}
 
 	/**
-	 * Method saves sorted data into output stream. It doesn't close internal input stream.
-	 * So please call close() after calling this method. 
+	 * Method saves sorted data into output stream. 
 	 * @param os output stream for saving sorted result
 	 * @throws IOException in case of problems with i/o or with JSON parsing
 	 * @throws KeyDuplicationException in case of duplicated keys are found in the same map
@@ -337,61 +336,6 @@ public class FastUTF8JsonSorter {
 		@Override
 		public int compareTo(KeyValueLocation o) {
 			return key.compareTo(o.key);
-		}
-	}
-
-	//removes thread safety code; per Roman 5x faster without it
-	private static class UnthreadedBufferedOutputStream extends OutputStream {
-		OutputStream out;
-		byte buffer[];
-		int bufSize;
-
-		public UnthreadedBufferedOutputStream(OutputStream out, int size) throws IOException {
-			this.out = out;
-			if (size <= 0) {
-				throw new IOException("Buffer size should be a positive number");
-			}
-			buffer = new byte[size];
-		}
-
-		void flushBuffer() throws IOException {
-			if (bufSize > 0) {
-				out.write(buffer, 0, bufSize);
-				bufSize = 0;
-			}
-		}
-
-		public void write(int b) throws IOException {
-			if (bufSize >= buffer.length) {
-				flushBuffer();
-			}
-			buffer[bufSize++] = (byte)b;
-		}
-
-		public void write(byte b[]) throws IOException {
-			write(b, 0, b.length);
-		}
-
-		public void write(byte b[], int off, int len) throws IOException {
-			if (len >= buffer.length) {
-				flushBuffer();
-				out.write(b, off, len);
-				return;
-			}
-			if (len > buffer.length - bufSize) {
-				flushBuffer();
-			}
-			System.arraycopy(b, off, buffer, bufSize, len);
-			bufSize += len;
-		}
-
-		public void flush() throws IOException {
-			flushBuffer();
-			out.flush();
-		}
-
-		public void close() throws IOException {
-			flush();
 		}
 	}
 }
