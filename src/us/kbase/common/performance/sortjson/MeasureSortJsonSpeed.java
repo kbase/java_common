@@ -178,7 +178,6 @@ public class MeasureSortJsonSpeed {
 			long start = System.nanoTime();
 			LowMemoryUTF8JsonSorter sk = new LowMemoryUTF8JsonSorter(temp);
 			sk.writeIntoStream(new NullOutputStream());
-			sk.close();
 			m.add(System.nanoTime() - start);
 		}
 		return new PerformanceMeasurement(m, "SortedKeysJsonFile JSON file sort");

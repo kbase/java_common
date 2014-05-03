@@ -187,7 +187,6 @@ public class MeasureSortJsonMem {
 			for (int i = 0; i < sorts; i++) {
 				LowMemoryUTF8JsonSorter sk = new LowMemoryUTF8JsonSorter(f);
 				sk.writeIntoStream(new NullOutputStream());
-				sk.close();
 			}
 		}
 
@@ -195,8 +194,6 @@ public class MeasureSortJsonMem {
 		public void sort(File f, OutputStream out) throws Exception {
 			LowMemoryUTF8JsonSorter sk = new LowMemoryUTF8JsonSorter(f);
 			sk.writeIntoStream(out);
-			sk.close();
-			
 		}
 	}
 	

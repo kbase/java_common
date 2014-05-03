@@ -64,7 +64,6 @@ public class FastUTF8JsonSorter {
 	 * Method saves sorted data into output stream. It doesn't close internal input stream.
 	 * So please call close() after calling this method. 
 	 * @param os output stream for saving sorted result
-	 * @return this object for chaining
 	 * @throws IOException in case of problems with i/o or with JSON parsing
 	 * @throws KeyDuplicationException in case of duplicated keys are found in the same map
 	 * @throws TooManyKeysException 

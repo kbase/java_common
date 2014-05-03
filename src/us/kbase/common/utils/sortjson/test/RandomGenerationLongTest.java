@@ -94,7 +94,7 @@ public class RandomGenerationLongTest {
 			sorter = new LowMemoryUTF8JsonSorter(data);
 		}
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		sorter.writeIntoStream(baos).close();
+		sorter.writeIntoStream(baos);
 		baos.close();
 		if (tempFile != null)
 			tempFile.delete();

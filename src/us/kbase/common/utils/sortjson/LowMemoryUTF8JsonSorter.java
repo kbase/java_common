@@ -27,13 +27,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @author Roman Sutormin (rsutormin)
  */
 public class LowMemoryUTF8JsonSorter {
-	private final RandomAccessSource raf;
+	private RandomAccessSource raf;
 	private PosBufInputStream mainIs;
 	private int maxBufferSize = 10 * 1024;
 	private boolean skipKeyDuplication = false;
 	private boolean useStringsForKeyStoring = false;
 	private long maxMemoryForKeyStoring = -1;
-
+	
+	private final File fileSource;
+	private final byte[] byteSource;
+	
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	private static final Charset UTF8 = Charset.forName("UTF-8");
 
@@ -43,7 +46,8 @@ public class LowMemoryUTF8JsonSorter {
 	 * @throws IOException
 	 */
 	public LowMemoryUTF8JsonSorter(File f) throws IOException {
-		raf = new RandomAccessSource(f);
+		fileSource = f;
+		byteSource = null;
 	}
 
 	/**
@@ -52,7 +56,8 @@ public class LowMemoryUTF8JsonSorter {
 	 * @throws IOException
 	 */
 	public LowMemoryUTF8JsonSorter(byte[] byteSource) throws IOException {
-		raf = new RandomAccessSource(byteSource);
+		fileSource = null;
+		this.byteSource = byteSource;
 	}
 
 	/**
@@ -136,20 +141,26 @@ public class LowMemoryUTF8JsonSorter {
 	}
 
 	/**
-	 * Method saves sorted data into output stream. It doesn't close internal input stream.
-	 * So please call close() after calling this method. 
+	 * Method saves sorted data into output stream.
 	 * @param os output stream for saving sorted result
-	 * @return this object for chaining
 	 * @throws IOException in case of problems with i/o or with JSON parsing
 	 * @throws KeyDuplicationException in case of duplicated keys are found in the same map
 	 * @throws TooManyKeysException 
 	 */
-	public LowMemoryUTF8JsonSorter writeIntoStream(OutputStream os) 
+	public void writeIntoStream(OutputStream os) 
 			throws IOException, KeyDuplicationException, TooManyKeysException {
-		UnthreadedBufferedOutputStream ubos = new UnthreadedBufferedOutputStream(os, 100000);
-		write(0, -1, maxMemoryForKeyStoring > 0 ? new long[] {0L} : null, new ArrayList<Object>(), ubos);
-		ubos.flush();
-		return this;
+		try {
+			if (fileSource == null) {
+				raf = new RandomAccessSource(byteSource);
+			} else {
+				raf = new RandomAccessSource(fileSource);
+			}
+			UnthreadedBufferedOutputStream ubos = new UnthreadedBufferedOutputStream(os, 100000);
+			write(0, -1, maxMemoryForKeyStoring > 0 ? new long[] {0L} : null, new ArrayList<Object>(), ubos);
+			ubos.flush();
+		} finally {
+			raf.close();
+		}
 	}
 
 	private void write(long globalStart, long globalStop, long[] keysByteSize, 
@@ -367,14 +378,6 @@ public class LowMemoryUTF8JsonSorter {
 		return null;
 	}
 
-	/**
-	 * Closing inner input streams after writing.
-	 * @throws IOException
-	 */
-	public void close() throws IOException {
-		raf.close();
-	}
-
 	private static class RandomAccessSource {
 		private RandomAccessFile raf = null;
 		private byte[] byteSrc = null;
@@ -470,6 +473,7 @@ public class LowMemoryUTF8JsonSorter {
 			return bufSize > 0;
 		}
 
+		@SuppressWarnings("unused")
 		public byte[] read(long start, byte[] array) throws IOException {
 			setPosition(start);
 			for (int arrPos = 0; arrPos < array.length; arrPos++) {
