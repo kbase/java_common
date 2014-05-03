@@ -21,7 +21,7 @@ import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class SortedKeysJsonFileTest {
+public class LowMemorySorterTest {
 	public static void main(String[] args) throws Exception {
 		testSmallMap();
 		System.out.println("---------------------------------");

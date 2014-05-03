@@ -9,7 +9,7 @@ import org.junit.Test;
 import us.kbase.common.utils.sortjson.KeyDuplicationException;
 import us.kbase.common.utils.sortjson.FastUTF8JsonSorter;
 
-public class SortedKeysJsonBytesTest {
+public class FastSorterTest {
 	
 	@Test
 	public void testArrayWithMap() {
