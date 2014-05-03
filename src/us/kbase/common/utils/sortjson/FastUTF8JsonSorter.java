@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * bytes per key for mapping key to place of key-value data in data source.
  * @author Roman Sutormin (rsutormin)
  */
-public class SortedKeysJsonBytes {
+public class FastUTF8JsonSorter {
 	private byte[] data;
 	private boolean skipKeyDuplication = false;
 	private static final int DEFAULT_LIST_INIT_SIZE = 4;
@@ -38,7 +38,7 @@ public class SortedKeysJsonBytes {
 	 * @param byteSource byte array data source
 	 * @throws IOException
 	 */
-	public SortedKeysJsonBytes(byte[] byteSource) throws IOException {
+	public FastUTF8JsonSorter(byte[] byteSource) throws IOException {
 		data = byteSource;
 	}
 
@@ -55,7 +55,7 @@ public class SortedKeysJsonBytes {
 	 * @param skipKeyDuplication value to set
 	 * @return this object for chaining
 	 */
-	public SortedKeysJsonBytes setSkipKeyDuplication(boolean skipKeyDuplication) {
+	public FastUTF8JsonSorter setSkipKeyDuplication(boolean skipKeyDuplication) {
 		this.skipKeyDuplication = skipKeyDuplication;
 		return this;
 	}

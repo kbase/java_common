@@ -19,8 +19,8 @@ import java.util.Map.Entry;
 
 import us.kbase.common.utils.MD5;
 import us.kbase.common.utils.MD5DigestOutputStream;
-import us.kbase.common.utils.sortjson.SortedKeysJsonBytes;
-import us.kbase.common.utils.sortjson.SortedKeysJsonFile;
+import us.kbase.common.utils.sortjson.FastUTF8JsonSorter;
+import us.kbase.common.utils.sortjson.LowMemoryUTF8JsonSorter;
 
 //import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -168,14 +168,14 @@ public class MeasureSortJsonMem {
 		public void sort(File f, int sorts) throws Exception {
 			byte[] b = Files.readAllBytes(f.toPath());
 			for (int i = 0; i < sorts; i++) {
-				new SortedKeysJsonFile(b).writeIntoStream(new NullOutputStream());
+				new LowMemoryUTF8JsonSorter(b).writeIntoStream(new NullOutputStream());
 			}
 		}
 
 		@Override
 		public void sort(File f, OutputStream out) throws Exception {
 			byte[] b = Files.readAllBytes(f.toPath());
-			new SortedKeysJsonFile(b).writeIntoStream(out);
+			new LowMemoryUTF8JsonSorter(b).writeIntoStream(out);
 		}
 		
 	}
@@ -185,7 +185,7 @@ public class MeasureSortJsonMem {
 		@Override
 		public void sort(File f, int sorts) throws Exception {
 			for (int i = 0; i < sorts; i++) {
-				SortedKeysJsonFile sk = new SortedKeysJsonFile(f);
+				LowMemoryUTF8JsonSorter sk = new LowMemoryUTF8JsonSorter(f);
 				sk.writeIntoStream(new NullOutputStream());
 				sk.close();
 			}
@@ -193,7 +193,7 @@ public class MeasureSortJsonMem {
 
 		@Override
 		public void sort(File f, OutputStream out) throws Exception {
-			SortedKeysJsonFile sk = new SortedKeysJsonFile(f);
+			LowMemoryUTF8JsonSorter sk = new LowMemoryUTF8JsonSorter(f);
 			sk.writeIntoStream(out);
 			sk.close();
 			
@@ -206,14 +206,14 @@ public class MeasureSortJsonMem {
 		public void sort(File f, int sorts) throws Exception {
 			byte[] b = Files.readAllBytes(f.toPath());
 			for (int i = 0; i < sorts; i++) {
-				new SortedKeysJsonBytes(b).writeIntoStream(new NullOutputStream());
+				new FastUTF8JsonSorter(b).writeIntoStream(new NullOutputStream());
 			}
 		}
 
 		@Override
 		public void sort(File f, OutputStream out) throws Exception {
 			byte[] b = Files.readAllBytes(f.toPath());
-			new SortedKeysJsonBytes(b).writeIntoStream(out);
+			new FastUTF8JsonSorter(b).writeIntoStream(out);
 		}
 	}
 	

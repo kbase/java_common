@@ -7,7 +7,7 @@ import junit.framework.Assert;
 import org.junit.Test;
 
 import us.kbase.common.utils.sortjson.KeyDuplicationException;
-import us.kbase.common.utils.sortjson.SortedKeysJsonBytes;
+import us.kbase.common.utils.sortjson.FastUTF8JsonSorter;
 
 public class SortedKeysJsonBytesTest {
 	
@@ -52,6 +52,6 @@ public class SortedKeysJsonBytesTest {
 	private static String sort(String json, boolean skipDoubleKeys) throws Exception {
 		Charset ch = Charset.forName("UTF-8");
 		byte[] data = json.getBytes(ch);
-		return new String(new SortedKeysJsonBytes(data).setSkipKeyDuplication(skipDoubleKeys).getSorted(), ch);
+		return new String(new FastUTF8JsonSorter(data).setSkipKeyDuplication(skipDoubleKeys).getSorted(), ch);
 	}
 }

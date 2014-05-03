@@ -8,8 +8,8 @@ import java.util.Random;
 import org.junit.Assert;
 import org.junit.Test;
 
-import us.kbase.common.utils.sortjson.SortedKeysJsonBytes;
-import us.kbase.common.utils.sortjson.SortedKeysJsonFile;
+import us.kbase.common.utils.sortjson.FastUTF8JsonSorter;
+import us.kbase.common.utils.sortjson.LowMemoryUTF8JsonSorter;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -84,14 +84,14 @@ public class RandomGenerationLongTest {
 	}
 	
 	private static byte[] sortWithFileSorter(byte[] data, File tempFile) throws Exception {
-		SortedKeysJsonFile sorter;
+		LowMemoryUTF8JsonSorter sorter;
 		if (tempFile != null) {
 			FileOutputStream fos = new FileOutputStream(tempFile);
 			fos.write(data);
 			fos.close();
-			sorter = new SortedKeysJsonFile(tempFile);
+			sorter = new LowMemoryUTF8JsonSorter(tempFile);
 		} else {
-			sorter = new SortedKeysJsonFile(data);
+			sorter = new LowMemoryUTF8JsonSorter(data);
 		}
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		sorter.writeIntoStream(baos).close();
@@ -102,7 +102,7 @@ public class RandomGenerationLongTest {
 	}
 
 	private static byte[] sortWithByteSorter(byte[] data) throws Exception {
-		return new SortedKeysJsonBytes(data).getSorted();
+		return new FastUTF8JsonSorter(data).getSorted();
 	}
 	
 	private static byte[] sortWithJackson(byte[] json) throws Exception {

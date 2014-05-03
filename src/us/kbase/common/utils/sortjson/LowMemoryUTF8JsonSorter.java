@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * bytes per key for mapping key to place of key-value data in data source.
  * @author Roman Sutormin (rsutormin)
  */
-public class SortedKeysJsonFile {
+public class LowMemoryUTF8JsonSorter {
 	private final RandomAccessSource raf;
 	private PosBufInputStream mainIs;
 	private int maxBufferSize = 10 * 1024;
@@ -42,7 +42,7 @@ public class SortedKeysJsonFile {
 	 * @param f file data source
 	 * @throws IOException
 	 */
-	public SortedKeysJsonFile(File f) throws IOException {
+	public LowMemoryUTF8JsonSorter(File f) throws IOException {
 		raf = new RandomAccessSource(f);
 	}
 
@@ -51,7 +51,7 @@ public class SortedKeysJsonFile {
 	 * @param byteSource byte array data source
 	 * @throws IOException
 	 */
-	public SortedKeysJsonFile(byte[] byteSource) throws IOException {
+	public LowMemoryUTF8JsonSorter(byte[] byteSource) throws IOException {
 		raf = new RandomAccessSource(byteSource);
 	}
 
@@ -68,7 +68,7 @@ public class SortedKeysJsonFile {
 	 * @param skipKeyDuplication value to set
 	 * @return this object for chaining
 	 */
-	public SortedKeysJsonFile setSkipKeyDuplication(boolean skipKeyDuplication) {
+	public LowMemoryUTF8JsonSorter setSkipKeyDuplication(boolean skipKeyDuplication) {
 		this.skipKeyDuplication = skipKeyDuplication;
 		return this;
 	}
@@ -87,7 +87,7 @@ public class SortedKeysJsonFile {
 	 * @param useStringsForKeyStoring
 	 * @return this object for chaining
 	 */
-	public SortedKeysJsonFile setUseStringsForKeyStoring(boolean useStringsForKeyStoring) {
+	public LowMemoryUTF8JsonSorter setUseStringsForKeyStoring(boolean useStringsForKeyStoring) {
 		this.useStringsForKeyStoring = useStringsForKeyStoring;
 		return this;
 	}
@@ -112,7 +112,7 @@ public class SortedKeysJsonFile {
 	 * @param maxBufferSize value to set
 	 * @return this object for chaining
 	 */
-	public SortedKeysJsonFile setMaxBufferSize(int maxBufferSize) {
+	public LowMemoryUTF8JsonSorter setMaxBufferSize(int maxBufferSize) {
 		this.maxBufferSize = maxBufferSize;
 		return this;
 	}
@@ -130,7 +130,7 @@ public class SortedKeysJsonFile {
 	 * @param maxMemoryForKeyStoring value to set
 	 * @return this object for chaining
 	 */
-	public SortedKeysJsonFile setMaxMemoryForKeyStoring(long maxMemoryForKeyStoring) {
+	public LowMemoryUTF8JsonSorter setMaxMemoryForKeyStoring(long maxMemoryForKeyStoring) {
 		this.maxMemoryForKeyStoring = maxMemoryForKeyStoring;
 		return this;
 	}
@@ -144,7 +144,7 @@ public class SortedKeysJsonFile {
 	 * @throws KeyDuplicationException in case of duplicated keys are found in the same map
 	 * @throws TooManyKeysException 
 	 */
-	public SortedKeysJsonFile writeIntoStream(OutputStream os) 
+	public LowMemoryUTF8JsonSorter writeIntoStream(OutputStream os) 
 			throws IOException, KeyDuplicationException, TooManyKeysException {
 		UnthreadedBufferedOutputStream ubos = new UnthreadedBufferedOutputStream(os, 100000);
 		write(0, -1, maxMemoryForKeyStoring > 0 ? new long[] {0L} : null, new ArrayList<Object>(), ubos);

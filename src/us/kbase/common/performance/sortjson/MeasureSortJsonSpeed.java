@@ -22,8 +22,8 @@ import java.util.Set;
 import org.nocrala.tools.texttablefmt.Table;
 
 import us.kbase.common.performance.PerformanceMeasurement;
-import us.kbase.common.utils.sortjson.SortedKeysJsonBytes;
-import us.kbase.common.utils.sortjson.SortedKeysJsonFile;
+import us.kbase.common.utils.sortjson.FastUTF8JsonSorter;
+import us.kbase.common.utils.sortjson.LowMemoryUTF8JsonSorter;
 
 //import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -146,7 +146,7 @@ public class MeasureSortJsonSpeed {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
 			long start = System.nanoTime();
-			new SortedKeysJsonFile(b).setUseStringsForKeyStoring(true)
+			new LowMemoryUTF8JsonSorter(b).setUseStringsForKeyStoring(true)
 					.writeIntoStream(new NullOutputStream());
 			m.add(System.nanoTime() - start);
 		}
@@ -158,7 +158,7 @@ public class MeasureSortJsonSpeed {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
 			long start = System.nanoTime();
-			new SortedKeysJsonFile(b).writeIntoStream(new NullOutputStream());
+			new LowMemoryUTF8JsonSorter(b).writeIntoStream(new NullOutputStream());
 			m.add(System.nanoTime() - start);
 		}
 		return new PerformanceMeasurement(m, "SortedKeysJsonFile JSON byte sort");
@@ -176,7 +176,7 @@ public class MeasureSortJsonSpeed {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
 			long start = System.nanoTime();
-			SortedKeysJsonFile sk = new SortedKeysJsonFile(temp);
+			LowMemoryUTF8JsonSorter sk = new LowMemoryUTF8JsonSorter(temp);
 			sk.writeIntoStream(new NullOutputStream());
 			sk.close();
 			m.add(System.nanoTime() - start);
@@ -189,7 +189,7 @@ public class MeasureSortJsonSpeed {
 		List<Long> m = new LinkedList<Long>();
 		for (int i = 0; i < sorts; i++) {
 			long start = System.nanoTime();
-			new SortedKeysJsonBytes(b).writeIntoStream(new NullOutputStream());
+			new FastUTF8JsonSorter(b).writeIntoStream(new NullOutputStream());
 			m.add(System.nanoTime() - start);
 		}
 		return new PerformanceMeasurement(m, "SortedKeysJsonBytes JSON sort");
