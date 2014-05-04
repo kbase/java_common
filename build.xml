@@ -55,6 +55,7 @@
 
   <target name="init" description="make directories">
     <!-- Create the output directory structure-->
+    <delete dir="${classes}"/>
     <mkdir dir="${classes}"/>
     <mkdir dir="${docs}"/>
   </target>
