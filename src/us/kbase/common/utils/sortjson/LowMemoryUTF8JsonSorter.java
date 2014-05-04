@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * bytes per key for mapping key to place of key-value data in data source.
  * @author Roman Sutormin (rsutormin)
  */
-public class LowMemoryUTF8JsonSorter {
+public class LowMemoryUTF8JsonSorter implements UTF8JsonSorter {
 	private RandomAccessSource raf;
 	private PosBufInputStream mainIs;
 	private int maxBufferSize = 10 * 1024;
@@ -45,7 +45,7 @@ public class LowMemoryUTF8JsonSorter {
 	 * @param f file data source
 	 * @throws IOException
 	 */
-	public LowMemoryUTF8JsonSorter(File f) throws IOException {
+	public LowMemoryUTF8JsonSorter(File f) {
 		fileSource = f;
 		byteSource = null;
 	}
@@ -55,7 +55,7 @@ public class LowMemoryUTF8JsonSorter {
 	 * @param byteSource byte array data source
 	 * @throws IOException
 	 */
-	public LowMemoryUTF8JsonSorter(byte[] byteSource) throws IOException {
+	public LowMemoryUTF8JsonSorter(byte[] byteSource) {
 		fileSource = null;
 		this.byteSource = byteSource;
 	}

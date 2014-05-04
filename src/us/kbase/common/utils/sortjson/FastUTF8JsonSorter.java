@@ -14,19 +14,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 //TODO this doc needs updating
 //TODO lots of shared code with SortedKeysJsonFile
 /**
- * Class sorts map keys in JSON data stored in either in byte array. 
+ * Class sorts map keys in JSON data stored in byte array. 
  * Note that the data *MUST* be in UTF-8 - this is assumed by the sorter.
  * Result of sorting is written into external output stream without modification 
- * of original data source. Code is optimized in the way of using as less memory 
- * as possible. The only case of large memory requirement is map with large 
- * count of keys is present in data. In order to sort keys of some map we need 
- * to store all keys of this map in memory. For default settings keys are stored 
- * in memory as byte arrays. So if the data contains few millions of keys in the
- * same map we need to keep in memory all these key values bytes plus about 24
- * bytes per key for mapping key to place of key-value data in data source.
+ * of original data source.
  * @author Roman Sutormin (rsutormin)
  */
-public class FastUTF8JsonSorter {
+public class FastUTF8JsonSorter implements UTF8JsonSorter {
 	private byte[] data;
 	private boolean skipKeyDuplication = false;
 	private static final int DEFAULT_LIST_INIT_SIZE = 4;
@@ -38,7 +32,7 @@ public class FastUTF8JsonSorter {
 	 * @param byteSource byte array data source
 	 * @throws IOException
 	 */
-	public FastUTF8JsonSorter(byte[] byteSource) throws IOException {
+	public FastUTF8JsonSorter(byte[] byteSource) {
 		data = byteSource;
 	}
 
@@ -72,7 +66,8 @@ public class FastUTF8JsonSorter {
 		int[] pos = {0};
 		List<Object> path = new ArrayList<Object>();
 		JsonElement root = searchForElement(pos, path);
-		UnthreadedBufferedOutputStream ubos = new UnthreadedBufferedOutputStream(os, 100000);
+		UnthreadedBufferedOutputStream ubos =
+				new UnthreadedBufferedOutputStream(os, 100000);
 		root.write(data, ubos);
 		ubos.flush();
 	}
