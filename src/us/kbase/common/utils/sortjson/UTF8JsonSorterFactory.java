@@ -15,7 +15,7 @@ public class UTF8JsonSorterFactory {
 	
 	/** Construct the factory
 	 * @param maxMemoryUse the maximum memory to use when sorting *including*
-	 * the input bytes.
+	 * the input bytes. This is an approximate value.
 	 */
 	public UTF8JsonSorterFactory(final int maxMemoryUse) {
 		if (maxMemoryUse < 1) {
