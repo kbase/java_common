@@ -62,7 +62,7 @@ public class JsonServerServlet extends HttpServlet {
 	private Server jettyServer = null;
 	private Integer jettyPort = null;
 	private boolean startupFailed = false;
-	private Long maxObjectSize = null;
+	private Long maxRPCPackageSize = null;
 	private int maxRpcMemoryCacheSize = 16 * 1024 * 1024;
 	private File rpcDiskCacheTempDir = null;
 		
@@ -271,8 +271,8 @@ public class JsonServerServlet extends HttpServlet {
 						break;
 					os.write(buffer, 0, count);
 					rpcSize += count;
-					if (maxObjectSize != null && rpcSize > maxObjectSize) {
-						writeError(response, -32700, "Object is too big, length is more than " + maxObjectSize + " bytes", output);
+					if (maxRPCPackageSize != null && rpcSize > maxRPCPackageSize) {
+						writeError(response, -32700, "Object is too big, length is more than " + maxRPCPackageSize + " bytes", output);
 						os.close();
 						return;
 					}
@@ -437,12 +437,12 @@ public class JsonServerServlet extends HttpServlet {
 		return tempFile;
 	}
 	
-	protected Long getMaxObjectSize() {
-		return this.maxObjectSize;
+	protected Long getMaxRPCPackageSize() {
+		return this.maxRPCPackageSize;
 	}
 	
-	protected void setMaxObjectSize(Long maxObjectSize) {
-		this.maxObjectSize = maxObjectSize;
+	protected void setMaxRPCPackageSize(Long maxRPCPackageSize) {
+		this.maxRPCPackageSize = maxRPCPackageSize;
 	}
 	
 	private static AuthToken validateToken(String token) throws Exception {
