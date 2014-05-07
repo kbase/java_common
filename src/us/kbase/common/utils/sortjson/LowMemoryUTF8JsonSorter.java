@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @author Roman Sutormin (rsutormin)
  */
 public class LowMemoryUTF8JsonSorter implements UTF8JsonSorter {
-	private RandomAccessSource raf;
 	private PosBufInputStream mainIs;
 	private int maxBufferSize = 10 * 1024;
 	private boolean skipKeyDuplication = false;
@@ -168,25 +167,28 @@ public class LowMemoryUTF8JsonSorter implements UTF8JsonSorter {
 	 */
 	public void writeIntoStream(OutputStream os) 
 			throws IOException, KeyDuplicationException, TooManyKeysException {
-		mainIs = null;
+		RandomAccessSource raf = null;
 		try {
 			if (fileSource == null) {
 				raf = new RandomAccessSource(byteSource);
 			} else {
 				raf = new RandomAccessSource(fileSource);
 			}
+			mainIs = new PosBufInputStream(raf, maxBufferSize);
 			UnthreadedBufferedOutputStream ubos = new UnthreadedBufferedOutputStream(os, 100000);
 			write(0, -1, maxMemoryForKeyStoring > 0 ? new long[] {0L} : null, new ArrayList<Object>(), ubos);
 			ubos.flush();
 		} finally {
-			raf.close();
+			if (raf != null) {
+				raf.close();
+			}
 		}
 	}
 
 	private void write(long globalStart, long globalStop, long[] keysByteSize, 
 			List<Object> path, UnthreadedBufferedOutputStream os) 
 					throws IOException, KeyDuplicationException, TooManyKeysException {
-		PosBufInputStream is = setPosition(globalStart);
+		PosBufInputStream is = mainIs.setPosition(globalStart);
 		while (true) {
 			if (globalStop >= 0 && is.getPosition() >= globalStop)
 				break;
@@ -267,12 +269,6 @@ public class LowMemoryUTF8JsonSorter implements UTF8JsonSorter {
 			sb.append("/").append(item);
 		}
 		return sb.toString();
-	}
-
-	private PosBufInputStream setPosition(long pos) throws IOException {
-		if (mainIs == null)
-			mainIs = new PosBufInputStream(raf, maxBufferSize);
-		return mainIs.setPosition(pos);
 	}
 
 	private List<KeyValueLocation> searchForMapCloseBracket(PosBufInputStream raf, boolean createMap, 
