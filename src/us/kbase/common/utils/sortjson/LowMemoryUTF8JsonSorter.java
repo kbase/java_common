@@ -39,23 +39,30 @@ public class LowMemoryUTF8JsonSorter implements UTF8JsonSorter {
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	private static final Charset UTF8 = Charset.forName("UTF-8");
 
+	/* The memory calculations performed in this class aren't entirely
+	 * accurate, but they should be close enough for our purposes.
+	 * 
+	 * Assumes that UseCompressedOops is false and a 64bit VM.
+	 */
 	
+	//ttl 40
 	final static int keyValueLocationMemUse =
-			8   // class
-			+ 8 // object pointer
-			+ 8 // long
-			+ 8 // long
-			;
-	
-	//ttl 44
-	final static int keyByteArrayMemOverhead = 12 + keyValueLocationMemUse;
+			16   // class
+			+ 8  // object reference
+			+ 8  // long
+			+ 8; // long
 	
 	//ttl 64
+	final static int keyByteArrayMemOverhead = 
+			24 //byte array
+			+ keyValueLocationMemUse;
+	
+	//ttl 96
 	final static int keyStringMemOverhead =
-			8    //class
-			+ 8  //array pointer
-			+ 12 //char array
-			+ 4  //int for hash
+			16      // string class
+			+ 8     //array reference
+			+ 24    //char array
+			+ 2 * 4 //2 ints for hashes
 			+ keyValueLocationMemUse;
 	
 	/**
@@ -341,9 +348,16 @@ public class LowMemoryUTF8JsonSorter implements UTF8JsonSorter {
 	
 	private void countKeysMemory(long[] keysByteSize, String currentKey, List<Object> path) 
 			throws TooManyKeysException {
-		keysByteSize[0] += useStringsForKeyStoring ?
-				(2 * currentKey.length() + keyStringMemOverhead) :
-				(currentKey.length() + keyByteArrayMemOverhead);
+		if (useStringsForKeyStoring) {
+			final long arrbytes = 2 * currentKey.length();
+			final long padding = 8 - arrbytes % 8; //aligned to 8 byte boundaries
+			keysByteSize[0] += keyStringMemOverhead + arrbytes + padding;
+		} else {
+			//assumes all chars are ascii, could be more accurate by translating to UTF-8
+			final long arrbytes = currentKey.length();
+			final long padding = 8 - arrbytes % 8; //aligned to 8 byte boundaries
+			keysByteSize[0] += keyByteArrayMemOverhead + arrbytes + padding;
+		}
 		if (maxMemoryForKeyStoring > 0 && keysByteSize[0] > maxMemoryForKeyStoring) {
 			path.remove(path.size() - 1);
 			throw new TooManyKeysException(maxMemoryForKeyStoring, getPathText(path));

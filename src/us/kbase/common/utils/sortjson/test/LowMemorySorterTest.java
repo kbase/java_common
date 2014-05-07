@@ -71,7 +71,6 @@ public class LowMemorySorterTest {
 	@Test
 	public void keyMemUse() throws Exception {
 		String json = "{\"z\":\"a\",\"b\":\"d\"}";
-		int maxmem = 1 + 44 + 1 + 44;
 		File temp = File.createTempFile("lowmemsorttest", null);
 		temp.deleteOnExit();
 		FileOutputStream fo = new FileOutputStream(temp);
@@ -79,6 +78,7 @@ public class LowMemorySorterTest {
 		fo.close();
 
 		//test file with byte keys sort
+		int maxmem = 8 + 64 + 8 + 64; // 8 vs 1 for padding
 		LowMemoryUTF8JsonSorter s = new LowMemoryUTF8JsonSorter(temp);
 		testKeyMemUse(maxmem, s);
 
@@ -87,7 +87,7 @@ public class LowMemorySorterTest {
 		testKeyMemUse(maxmem, s);
 		
 		//test file with string keys sort
-		maxmem = 2 + 64 + 2 + 64;
+		maxmem = 8 + 96 + 8 + 96; // 8 vs 2 for padding
 		s = new LowMemoryUTF8JsonSorter(temp);
 		s.setUseStringsForKeyStoring(true);
 		testKeyMemUse(maxmem, s);
