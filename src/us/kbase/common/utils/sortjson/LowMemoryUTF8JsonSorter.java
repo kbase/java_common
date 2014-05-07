@@ -40,6 +40,25 @@ public class LowMemoryUTF8JsonSorter implements UTF8JsonSorter {
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	private static final Charset UTF8 = Charset.forName("UTF-8");
 
+	
+	final static int keyValueLocationMemUse =
+			8   // class
+			+ 8 // object pointer
+			+ 8 // long
+			+ 8 // long
+			;
+	
+	//ttl 44
+	final static int keyByteArrayMemOverhead = 12 + keyValueLocationMemUse;
+	
+	//ttl 64
+	final static int keyStringMemOverhead =
+			8    //class
+			+ 8  //array pointer
+			+ 12 //char array
+			+ 4  //int for hash
+			+ keyValueLocationMemUse;
+	
 	/**
 	 * Defines file as data source.
 	 * @param f file data source
@@ -149,6 +168,7 @@ public class LowMemoryUTF8JsonSorter implements UTF8JsonSorter {
 	 */
 	public void writeIntoStream(OutputStream os) 
 			throws IOException, KeyDuplicationException, TooManyKeysException {
+		mainIs = null;
 		try {
 			if (fileSource == null) {
 				raf = new RandomAccessSource(byteSource);
@@ -322,11 +342,12 @@ public class LowMemoryUTF8JsonSorter implements UTF8JsonSorter {
 		}
 		return ret;
 	}
-
+	
 	private void countKeysMemory(long[] keysByteSize, String currentKey, List<Object> path) 
 			throws TooManyKeysException {
-		keysByteSize[0] += useStringsForKeyStoring ? (2 * currentKey.length() + 8 + 4 + 3 * 8) : 
-			(currentKey.length() + 3 * 8);
+		keysByteSize[0] += useStringsForKeyStoring ?
+				(2 * currentKey.length() + keyStringMemOverhead) :
+				(currentKey.length() + keyByteArrayMemOverhead);
 		if (maxMemoryForKeyStoring > 0 && keysByteSize[0] > maxMemoryForKeyStoring) {
 			path.remove(path.size() - 1);
 			throw new TooManyKeysException(maxMemoryForKeyStoring, getPathText(path));

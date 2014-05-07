@@ -1,5 +1,9 @@
 package us.kbase.common.utils.sortjson.test;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
+
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -15,6 +19,7 @@ import org.junit.Test;
 
 import us.kbase.common.utils.sortjson.KeyDuplicationException;
 import us.kbase.common.utils.sortjson.LowMemoryUTF8JsonSorter;
+import us.kbase.common.utils.sortjson.TooManyKeysException;
 
 import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonGenerationException;
@@ -60,6 +65,54 @@ public class LowMemorySorterTest {
 			Assert.fail("Should be exception");
 		} catch (KeyDuplicationException e) {
 			Assert.assertEquals("Duplicated key 'kkk' was found at /ro\\/ot/1", e.getMessage());
+		}
+	}
+	
+	@Test
+	public void keyMemUse() throws Exception {
+		String json = "{\"z\":\"a\",\"b\":\"d\"}";
+		int maxmem = 1 + 44 + 1 + 44;
+		File temp = File.createTempFile("lowmemsorttest", null);
+		temp.deleteOnExit();
+		FileOutputStream fo = new FileOutputStream(temp);
+		fo.write(json.getBytes("UTF-8"));
+		fo.close();
+
+		//test file with byte keys sort
+		LowMemoryUTF8JsonSorter s = new LowMemoryUTF8JsonSorter(temp);
+		testKeyMemUse(maxmem, s);
+
+		//test byte with byte keys sort
+		s = new LowMemoryUTF8JsonSorter(json.getBytes("UTF-8"));
+		testKeyMemUse(maxmem, s);
+		
+		//test file with string keys sort
+		maxmem = 2 + 64 + 2 + 64;
+		s = new LowMemoryUTF8JsonSorter(temp);
+		s.setUseStringsForKeyStoring(true);
+		testKeyMemUse(maxmem, s);
+		
+		//test byte with string keys sort
+		s = new LowMemoryUTF8JsonSorter(json.getBytes("UTF-8"));
+		s.setUseStringsForKeyStoring(true);
+		testKeyMemUse(maxmem, s);
+	}
+
+	private void testKeyMemUse(int maxmem, LowMemoryUTF8JsonSorter s)
+			throws IOException, KeyDuplicationException, TooManyKeysException {
+		//test successful sort
+		s.setMaxMemoryForKeyStoring(maxmem);
+		s.writeIntoStream(new ByteArrayOutputStream());
+		
+		//test failed sort
+		s.setMaxMemoryForKeyStoring(maxmem - 1);
+		try {
+			s.writeIntoStream(new ByteArrayOutputStream());
+			fail("sorted with too little mem");
+		} catch (TooManyKeysException tmke) {
+			assertThat("got correct exception", tmke.getLocalizedMessage(),
+					is("Memory necessary for sorting map keys exceeds the limit "
+						+ (maxmem - 1) + " bytes at /"));
 		}
 	}
 
