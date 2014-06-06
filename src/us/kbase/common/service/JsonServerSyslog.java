@@ -101,7 +101,7 @@ public class JsonServerSyslog {
 	}
 	
 	public void logErr(String message) {
-		logErr(new Exception(message), findCaller());
+		log(LOG_LEVEL_ERR, findCaller(), message);
 	}
 
 	public void logErr(Throwable err) {
