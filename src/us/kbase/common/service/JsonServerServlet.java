@@ -14,12 +14,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -445,17 +443,29 @@ public class JsonServerServlet extends HttpServlet {
 		this.maxRPCPackageSize = maxRPCPackageSize;
 	}
 	
-	private static AuthToken validateToken(String token) throws Exception {
+	private static AuthToken validateToken(String token)
+			throws AuthException, IOException {
 		if (token == null)
-			throw new IllegalStateException("Authorization is required for this method but no credentials were provided");
-		AuthToken ret = new AuthToken(token);
-		if (!AuthService.validateToken(ret)) {
-			throw new IllegalStateException("Token was not validated");
+			throw new AuthException(
+					"Authorization is required for this method but no credentials were provided");
+		final AuthToken ret = new AuthToken(token);
+		final boolean validToken;
+		try {
+			validToken = AuthService.validateToken(ret);
+		} catch (UnknownHostException uhe) {
+			//message from UHE is only the host name
+			throw new AuthException(
+					"Could not contact Authorization Service host to validate user token: "
+							+ uhe.getMessage(), uhe);
+		}
+		if (!validToken) {
+			throw new AuthException("User token was invalid");
 		}
 		return ret;
 	}
 
-	public static AuthUser getUserProfile(AuthToken token) throws KeyManagementException, UnsupportedEncodingException, NoSuchAlgorithmException, IOException, AuthException {
+	public static AuthUser getUserProfile(AuthToken token)
+			throws IOException, AuthException {
 		return AuthService.getUserFromToken(token);
 	}
 	
