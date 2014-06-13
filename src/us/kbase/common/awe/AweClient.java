@@ -33,12 +33,11 @@ public class AweClient {
 		return ret;
 	}
 	
-	public static AwfTemplate createSimpleJobTemplate(String pipeline, String jobName, String jobStatusId, String args, String scriptName) {
+	public static AwfTemplate createSimpleJobTemplate(String pipeline, String jobName, String args, String scriptName) {
 		AwfTemplate ret = new AwfTemplate();
 		AwfInfo info = new AwfInfo();
 		info.setPipeline(pipeline);
 		info.setName(jobName);
-		info.setSessionId(jobStatusId);
 		ret.setInfo(info);
 		AwfTask task = new AwfTask();
 		AwfCmd cmd = new AwfCmd();
@@ -49,17 +48,19 @@ public class AweClient {
 		return ret;
 	}
 	
-	public String submitJob(AwfTemplate job) throws IOException {
+	public AweResponse submitJob(AwfTemplate job) throws IOException {
 		CloseableHttpClient httpClient = HttpClients.createDefault();
 		HttpPost httpPost = new HttpPost(getServerUrl() + "job");
 		MultipartEntityBuilder builder = MultipartEntityBuilder.create();
 		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-		new ObjectMapper().writeValue(buffer, job);
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.writeValue(buffer, job);
 		builder.addBinaryBody("upload", buffer.toByteArray(),
 				ContentType.APPLICATION_OCTET_STREAM, "tempjob.json");
 		httpPost.setEntity(builder.build());
 		HttpResponse response = httpClient.execute(httpPost);
 		String postResponse = EntityUtils.toString(response.getEntity());
-		return postResponse;
+		System.out.println(postResponse);
+		return mapper.readValue(postResponse, AweResponse.class);
 	}
 }
