@@ -38,7 +38,7 @@ public class TaskQueue {
 			conn.exec("create table " + QUEUE_TABLE_NAME + " (" +
 					"jobid varchar(100) primary key," +
 					"type varchar(100)," +
-					"params varchar(1000)," +
+					"params clob(100 m)," +
 					"auth varchar(1000)," +
 					"outref varchar(1000)" +
 					")");
