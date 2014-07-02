@@ -17,6 +17,9 @@ import java.util.TimeZone;
  */
 public class UTCDateFormat {
 	
+	//TODO unit tests
+	//TODO allow milliseconds (or at least test if MS are allowed
+	
 	private final SimpleDateFormat format =
 			new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
 
@@ -52,5 +55,12 @@ public class UTCDateFormat {
 			throw new IllegalArgumentException("date string cannot be null");
 		}
 		return format.parse(d);
+	}
+	
+	public static void main(String[] args) throws Exception {
+		String date = "2014-06-26T21:32:55+0000";
+		System.out.println(new UTCDateFormat().parseDate(date));
+		String date2 = "2014-06-26T21:32:54+0000";
+		System.out.println(new UTCDateFormat().parseDate(date2));
 	}
 }
