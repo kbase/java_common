@@ -4,7 +4,7 @@ ANT = ant
 
 GITCOMMIT := $(shell git rev-parse --short HEAD)
 EPOCH := $(shell date +%s)
-//TODO use --points-at vs. --contains when git 1.7.10 available
+#TODO use --points-at vs. --contains when git 1.7.10 available
 TAGS := $(shell git tag --contains $(GITCOMMIT))
 TAG := $(shell python internal/checktags.py $(TAGS))
 
