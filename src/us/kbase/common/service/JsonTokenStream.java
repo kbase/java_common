@@ -142,7 +142,8 @@ public class JsonTokenStream extends JsonParser {
 	 * @throws JsonParseException
 	 * @throws IOException
 	 */
-	private JsonTokenStream(Object data, int largeStringbufferSize) throws JsonParseException, IOException {
+	private JsonTokenStream(Object data, int largeStringbufferSize)
+			throws JsonParseException, IOException {
 		final long len;
 		if (data instanceof String) {
 			sdata = (String)data;
