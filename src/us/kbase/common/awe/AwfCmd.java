@@ -1,9 +1,14 @@
 package us.kbase.common.awe;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+
+@JsonInclude(Include.NON_NULL)
 public class AwfCmd {
 	private String args;
 	private String description = "";
 	private String name;
+	private AwfEnviron environ = null;
 	
 	public String getArgs() {
 		return args;
@@ -27,5 +32,13 @@ public class AwfCmd {
 	
 	public void setName(String name) {
 		this.name = name;
+	}
+	
+	public AwfEnviron getEnviron() {
+		return environ;
+	}
+	
+	public void setEnviron(AwfEnviron environ) {
+		this.environ = environ;
 	}
 }

@@ -305,6 +305,7 @@ public class JsonServerServlet extends HttpServlet {
 				writeError(response, -32601, "JSON RPC method property is not defined", output);
 				return;
 			}
+			rpcName = correctRpcMethod(rpcName);
 			List<UObject> paramsList = rpcCallData.getParams();
 			if (paramsList == null) {
 				writeError(response, -32601, "JSON RPC params property is not defined", output);
@@ -415,6 +416,11 @@ public class JsonServerServlet extends HttpServlet {
 		}
 	}
 
+	protected String correctRpcMethod(String methodWithModule) {
+		// Do nothing. Inherited classes can use for method/module name correction.
+		return methodWithModule;
+	}
+	
 	protected void checkMemoryForRpc() {
 		// Do nothing. Inherited classes could define proper implementation.
 	}
