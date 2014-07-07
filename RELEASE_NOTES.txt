@@ -4,6 +4,20 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.0.3 (Released 7/7/2014)
+--------------------------------------
+
+NEW FEATURES:
+- Client code allows trusting unsigned certs.
+- Configurable retries when establishing a connection to MongoDB.
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- N/A
+
+ANTICIPATED FUTURE DEVELOPMENTS:
+- None
+
+
 VERSION: 0.0.2 (Released 5/16/2014)
 --------------------------------------
 
