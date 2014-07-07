@@ -1,7 +1,6 @@
 package us.kbase.common.awe;
 
 import java.util.List;
-import java.util.Map;
 
 public class AweResponse {
 	private Integer status;

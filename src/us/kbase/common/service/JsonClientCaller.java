@@ -8,9 +8,18 @@ import us.kbase.auth.TokenExpiredException;
 import java.net.*;
 import java.nio.charset.Charset;
 import java.io.*;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.*;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -31,9 +40,30 @@ public class JsonClientCaller {
 	private String user = null;
 	private char[] password = null;
 	private AuthToken accessToken = null;
-	private boolean isAuthAllowedForHttp = false;
+	private boolean allowInsecureHttp = false;
+	private boolean trustAllCerts = false;
 	private Integer connectionReadTimeOut = 30 * 60 * 1000;
 	private File fileForNextRpcResponse = null;
+	
+	private static TrustManager[] GULLIBLE_TRUST_MGR = new TrustManager[] {
+		new X509TrustManager() {
+			public X509Certificate[] getAcceptedIssuers() {
+				return new X509Certificate[0];
+			}
+			public void checkClientTrusted(X509Certificate[] certs,
+					String authType) {}
+			public void checkServerTrusted(X509Certificate[] certs,
+					String authType) {}
+		}
+	};
+		
+	private static HostnameVerifier GULLIBLE_HOSTNAME_VERIFIER =
+		new HostnameVerifier() {
+			public boolean verify(String hostname, SSLSession session) {
+				return true;
+			}
+	};
+	
 	
 	public JsonClientCaller(URL url) {
 		serviceUrl = url;
@@ -56,13 +86,55 @@ public class JsonClientCaller {
 		this.password = password.toCharArray();
 		accessToken = requestTokenFromKBase(user, this.password);
 	}
+	
+	/** Determine whether this client allows insecure http connections
+	 * (vs. https).
+	 * @return true if insecure connections are allowed.
+	 */
+	public boolean isInsecureHttpConnectionAllowed() {
+		return allowInsecureHttp;
+	}
 
+	/** Deprecated - use isInsecureHttpConnectionAllowed().
+	 * @deprecated
+	 * @return
+	 */
 	public boolean isAuthAllowedForHttp() {
-		return isAuthAllowedForHttp;
+		return allowInsecureHttp;
+	}
+
+	/** Allow insecure http connections (vs. https). In production the value
+	 * should always be false.
+	 * @param allowed - true to allow insecure connections.
+	 */
+	public void setInsecureHttpConnectionAllowed(final boolean allowed) {
+		allowInsecureHttp = allowed;
 	}
 	
+	/** Deprecated - use setInsecureHttpConnectionAllowed
+	 * @param isAuthAllowedForHttp
+	 * @deprecated
+	 */
 	public void setAuthAllowedForHttp(boolean isAuthAllowedForHttp) {
-		this.isAuthAllowedForHttp = isAuthAllowedForHttp;
+		this.allowInsecureHttp = isAuthAllowedForHttp;
+	}
+	
+	/** Trust all SSL certificates. By default, self-signed certificates
+	 * may not be trusted and an error will occur when attempting to
+	 * connect to such a server. 
+	 * In production the value should always be false.
+	 * 
+	 * @param trustAll true to trust all SSL certificates.
+	 */
+	public void setAllSSLCertificatesTrusted(final boolean trustAll) {
+		trustAllCerts = trustAll;
+	}
+	
+	/** Determine whether this client trusts all SSL Certificates.
+	 * @return true if this client trusts all SSL Certificates.
+	 */
+	public boolean isAllSSLCertificatesTrusted() {
+		return trustAllCerts;
 	}
 	
 	public void setConnectionReadTimeOut(Integer connectionReadTimeOut) {
@@ -78,7 +150,7 @@ public class JsonClientCaller {
 		conn.setDoOutput(true);
 		conn.setRequestMethod("POST");
 		if (authRequired || accessToken != null) {
-			if (!(conn instanceof HttpsURLConnection || isAuthAllowedForHttp)) {
+			if (!(conn instanceof HttpsURLConnection || allowInsecureHttp)) {
 				throw new UnauthorizedException("RPC method required authentication shouldn't " +
 						"be called through unsecured http, use https instead or call " +
 						"setAuthAllowedForHttp(true) for your client");
@@ -96,6 +168,24 @@ public class JsonClientCaller {
 				accessToken = requestTokenFromKBase(user, password);
 			}
 			conn.setRequestProperty("Authorization", accessToken.toString());
+		}
+		if (conn instanceof HttpsURLConnection && trustAllCerts) {
+			final HttpsURLConnection hc = (HttpsURLConnection) conn;
+			final SSLContext sc;
+			try {
+				sc = SSLContext.getInstance("SSL");
+			} catch (NoSuchAlgorithmException e) {
+				throw new RuntimeException(
+						"Couldn't get SSLContext instance", e);
+			}
+			try {
+				sc.init(null, GULLIBLE_TRUST_MGR, new SecureRandom());
+			} catch (KeyManagementException e) {
+				throw new RuntimeException(
+						"Couldn't initialize SSLContext", e);
+			}
+			hc.setSSLSocketFactory(sc.getSocketFactory());
+			hc.setHostnameVerifier(GULLIBLE_HOSTNAME_VERIFIER);
 		}
 		return conn;
 	}
