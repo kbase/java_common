@@ -4,6 +4,18 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.0.4 (Released 7/18/2014)
+--------------------------------------
+
+NEW FEATURES:
+- minor string checking fn
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- N/A
+
+ANTICIPATED FUTURE DEVELOPMENTS:
+- None
+
 VERSION: 0.0.3 (Released 7/7/2014)
 --------------------------------------
 
