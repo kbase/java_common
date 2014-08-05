@@ -516,7 +516,11 @@ public class JsonServerServlet extends HttpServlet {
 			output.write(bais.toByteArray());
 			output.flush();
 		} catch (Exception e) {
+			System.err.println(
+					"Unable to write error to output - current exception:");
 			e.printStackTrace();
+			System.err.println("original exception:");
+			ex.printStackTrace();
 		}
 	}
 	
