@@ -133,6 +133,7 @@ public class MySQLController {
 		//get user input for a
 		reader.next();
 		ac.destroy(false);
+		reader.close();
 	}
 	
 }

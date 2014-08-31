@@ -124,6 +124,7 @@ public class JsonTokenStreamTest {
 		}
 	}
 	
+	@SuppressWarnings("resource")
 	@Test
 	public void streamingData() throws Exception {
 		for (String sdata: basicJsonData) {
@@ -147,6 +148,7 @@ public class JsonTokenStreamTest {
 	private void checkStreamingCorrectness(String expected, Object data)
 			throws Exception {
 		for (boolean skipParsing: Arrays.asList(true, false)) {
+			@SuppressWarnings("resource")
 			JsonTokenStream jts = new JsonTokenStream(data)
 					.setTrustedWholeJson(skipParsing);
 
@@ -190,6 +192,7 @@ public class JsonTokenStreamTest {
 		}
 	}
 
+	@SuppressWarnings("resource")
 	@Test
 	public void streamingDataWithMultiByteChars() throws Exception {
 		
@@ -230,6 +233,7 @@ public class JsonTokenStreamTest {
 	private void checkStreamingWithMultiByteChars(Object data, int buffersize, String exp)
 			throws JsonParseException, IOException {
 		for (boolean skipParsing: Arrays.asList(true, false)) {
+			@SuppressWarnings("resource")
 			JsonTokenStream jts = new JsonTokenStream(data)
 					.setTrustedWholeJson(skipParsing)
 					.setCopyBufferSize(buffersize);
@@ -251,6 +255,7 @@ public class JsonTokenStreamTest {
 	public void detectEncoding() throws Exception {
 		for (String data: basicJsonData) {
 			for (Charset enc: encodings) {
+				@SuppressWarnings("resource")
 				JsonTokenStream jts = new JsonTokenStream(data.getBytes(enc));
 				assertThat("encoding correctly detected", jts.getEncoding(),
 						is(enc));

@@ -45,6 +45,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class JsonServerServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private static final String APP_JSON = "application/json";
+	private static final String DONT_TRUST_X_IP_HEADERS =
+			"dont_trust_x_ip_headers";
+	private static final String STRING_TRUE = "true";
+	private static final String X_FORWARDED_FOR = "X-Forwarded-For";
+	private static final String X_REAL_IP = "X-Real-IP";
 	private ObjectMapper mapper;
 	private Map<String, Method> rpcCache;
 	public static final int LOG_LEVEL_ERR = JsonServerSyslog.LOG_LEVEL_ERR;
@@ -135,8 +140,9 @@ public class JsonServerServlet extends HttpServlet {
 		sysLogger = new JsonServerSyslog(serviceName, KB_DEP, LOG_LEVEL_INFO);
 		userLogger = new JsonServerSyslog(sysLogger);
 		//read the config file
-		if (file == null) 
+		if (file == null) {
 			return;
+		}
 		File deploy = new File(file);
 		Ini ini = null;
 		try {
@@ -233,7 +239,7 @@ public class JsonServerServlet extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		checkMemoryForRpc();
 		JsonServerSyslog.RpcInfo info = JsonServerSyslog.getCurrentRpcInfo().reset();
-		info.setIp(request.getRemoteAddr());
+		info.setIp(getIpAddress(request));
 		setupResponseHeaders(request, response);
 		OutputStream output	= response.getOutputStream();
 		String rpcName = null;
@@ -374,6 +380,7 @@ public class JsonServerServlet extends HttpServlet {
 				methodValues[methodValues.length - 1] = userProfile;
 			Object result;
 			try {
+				logHeaders(request);
 				sysLogger.log(LOG_LEVEL_INFO, getClass().getName(), "start method");
 				result = rpcMethod.invoke(this, methodValues);
 				sysLogger.log(LOG_LEVEL_INFO, getClass().getName(), "end method");
@@ -414,6 +421,32 @@ public class JsonServerServlet extends HttpServlet {
 				}
 			}
 		}
+	}
+
+	private void logHeaders(HttpServletRequest request) {
+		final String xFF = request.getHeader(X_FORWARDED_FOR);
+		if (xFF != null && !xFF.isEmpty()) {
+			sysLogger.log(LOG_LEVEL_INFO, getClass().getName(),
+					X_FORWARDED_FOR + ": " + xFF);
+		}
+		
+	}
+
+	private String getIpAddress(HttpServletRequest request) {
+		final String xFF = request.getHeader(X_FORWARDED_FOR);
+		final String realIP = request.getHeader(X_REAL_IP);
+		final boolean trustXHeaders = !STRING_TRUE.equals(
+				config.get(DONT_TRUST_X_IP_HEADERS));
+		
+		if (trustXHeaders) {
+			if (xFF != null && !xFF.isEmpty()) {
+				return xFF.split(",")[0].trim();
+			}
+			if (realIP != null && !realIP.isEmpty()) {
+				return realIP.trim();
+			}
+		}
+		return request.getRemoteAddr();
 	}
 
 	protected String correctRpcMethod(String methodWithModule) {

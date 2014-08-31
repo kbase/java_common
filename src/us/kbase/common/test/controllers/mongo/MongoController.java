@@ -80,6 +80,7 @@ public class MongoController {
 		//get user input for a
 		reader.next();
 		ac.destroy(false);
+		reader.close();
 	}
 	
 }
