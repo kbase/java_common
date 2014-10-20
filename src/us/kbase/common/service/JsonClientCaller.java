@@ -42,6 +42,7 @@ public class JsonClientCaller {
 	private AuthToken accessToken = null;
 	private boolean allowInsecureHttp = false;
 	private boolean trustAllCerts = false;
+	private boolean streamRequest = false;
 	private Integer connectionReadTimeOut = 30 * 60 * 1000;
 	private File fileForNextRpcResponse = null;
 	
@@ -137,6 +138,22 @@ public class JsonClientCaller {
 		return trustAllCerts;
 	}
 	
+	/** Sets streaming mode on. In this case, the data will be streamed to
+	 * the server in chunks as it is read from disk rather than buffered in
+	 * memory. Many servers are not compatible with this feature.
+	 * @param streamRequest true to set streaming mode on, false otherwise.
+	 */
+	public void setStreamingModeOn(boolean streamRequest) {
+		this.streamRequest = streamRequest;
+	}
+	
+	/** Returns true if streaming mode is on.
+	 * @return true if streaming mode is on.
+	 */
+	public boolean isStreamingModeOn() {
+		return streamRequest;
+	}
+	
 	public void setConnectionReadTimeOut(Integer connectionReadTimeOut) {
 		this.connectionReadTimeOut = connectionReadTimeOut;
 	}
@@ -204,19 +221,12 @@ public class JsonClientCaller {
 			throws IOException, JsonClientException {
 		HttpURLConnection conn = setupCall(authRequired);
 		String id = ("" + Math.random()).replace(".", "");
-		// Calculate content-length before
-		final long[] sizeWrapper = new long[] {0};
-		OutputStream os = new OutputStream() {
-			@Override
-			public void write(int b) {sizeWrapper[0]++;}
-			@Override
-			public void write(byte[] b) {sizeWrapper[0] += b.length;}
-			@Override
-			public void write(byte[] b, int o, int l) {sizeWrapper[0] += l;}
-		};
-		writeRequestData(method, arg, os, id);
-		// Set content-length
-		conn.setFixedLengthStreamingMode(sizeWrapper[0]);
+		if (streamRequest) {
+			// Calculate content-length before
+			final long size = calculateResponseLength(method, arg, id);
+			// Set content-length
+			conn.setFixedLengthStreamingMode(size);
+		}
 		// Write real data into http output stream
 		writeRequestData(method, arg, conn.getOutputStream(), id);
 		// Read response
@@ -319,6 +329,21 @@ public class JsonClientCaller {
 					} catch (Exception ignore) {}
 			}
 		}
+	}
+
+	private <ARG> long calculateResponseLength(String method, ARG arg,
+			String id) throws IOException {
+		final long[] sizeWrapper = new long[] {0};
+		OutputStream os = new OutputStream() {
+			@Override
+			public void write(int b) {sizeWrapper[0]++;}
+			@Override
+			public void write(byte[] b) {sizeWrapper[0] += b.length;}
+			@Override
+			public void write(byte[] b, int o, int l) {sizeWrapper[0] += l;}
+		};
+		writeRequestData(method, arg, os, id);
+		return sizeWrapper[0];
 	}
 
 	private static void checkFor500(int code, UnclosableInputStream wrapStream)
