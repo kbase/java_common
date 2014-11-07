@@ -1,5 +1,10 @@
 package us.kbase.common.awe;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
@@ -16,6 +21,22 @@ public class AwfInfo {
 	private String completedtime = null;
 	private Boolean auth = null;
 	private Boolean noretry = null;
+	private String service = null;
+	private Long priority = null;
+	private Map<String, Object> userattr = null;
+	private String description = null;
+	private Boolean tracking = null;
+    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    
+    @JsonAnyGetter
+    public Map<java.lang.String, Object> getAdditionalProperties() {
+        return this.additionalProperties;
+    }
+
+    @JsonAnySetter
+    public void setAdditionalProperties(java.lang.String name, Object value) {
+        this.additionalProperties.put(name, value);
+    }
 	
 	public String getPipeline() {
 		return pipeline;
@@ -103,5 +124,45 @@ public class AwfInfo {
 	
 	public void setNoretry(Boolean noretry) {
 		this.noretry = noretry;
+	}
+	
+	public String getService() {
+		return service;
+	}
+	
+	public void setService(String service) {
+		this.service = service;
+	}
+	
+	public Long getPriority() {
+		return priority;
+	}
+	
+	public void setPriority(Long priority) {
+		this.priority = priority;
+	}
+	
+	public Map<String, Object> getUserattr() {
+		return userattr;
+	}
+	
+	public void setUserattr(Map<String, Object> userattr) {
+		this.userattr = userattr;
+	}
+	
+	public String getDescription() {
+		return description;
+	}
+	
+	public void setDescription(String description) {
+		this.description = description;
+	}
+	
+	public Boolean getTracking() {
+		return tracking;
+	}
+	
+	public void setTracking(Boolean tracking) {
+		this.tracking = tracking;
 	}
 }

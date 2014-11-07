@@ -14,12 +14,13 @@ import org.apache.http.util.EntityUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class AweClient {
-	public static final String DEFAULT_SERVER_URL = "http://kbase.us/services/awe-api";
+	public static final String DEFAULT_PROD_SERVER_URL = "http://kbase.us/services/awe-api";
+	public static final String DEFAULT_DEV_SERVER_URL = "http://140.221.67.190:7080";
 	
 	private final String serverUrl;
 	
 	public AweClient() {
-		this(DEFAULT_SERVER_URL);
+		this(DEFAULT_PROD_SERVER_URL);
 	}
 	
 	public AweClient(String serverUrl) {
@@ -60,7 +61,7 @@ public class AweClient {
 		httpPost.setEntity(builder.build());
 		HttpResponse response = httpClient.execute(httpPost);
 		String postResponse = EntityUtils.toString(response.getEntity());
-		System.out.println(postResponse);
+		//System.out.println(postResponse);
 		return mapper.readValue(postResponse, AweResponse.class);
 	}
 }
