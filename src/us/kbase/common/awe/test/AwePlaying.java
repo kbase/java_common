@@ -1,12 +1,12 @@
 package us.kbase.common.awe.test;
 
 import java.util.Arrays;
-import java.util.Map;
+import java.util.TreeMap;
 
 import us.kbase.common.awe.AweClient;
-import us.kbase.common.awe.AweTaskHolder;
 import us.kbase.common.awe.AwfEnviron;
 import us.kbase.common.awe.AwfTemplate;
+import us.kbase.common.awe.task.AweTaskHolder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -26,7 +26,8 @@ public class AwePlaying {
 	}
 	
 	private static void testTaskHolder() throws Exception {
-		AweTaskHolder th = new AweTaskHolder();
-		th.prepareTask(TempTask.class, "sevret1").listToMap(Arrays.asList("k1", "v2", "k3", "v4"));
+		AweTaskHolder th = new AweTaskHolder(null, new TreeMap<String, String>());
+		String jobId = th.prepareTask(TempTask.class, "sevret1").listToMap(Arrays.asList("k1", "v2", "k3", "v4"));
+		System.out.println("Job id: " + jobId);
 	}
 }
