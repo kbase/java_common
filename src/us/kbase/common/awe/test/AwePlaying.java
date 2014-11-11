@@ -26,7 +26,7 @@ public class AwePlaying {
 	}
 	
 	private static void testTaskHolder() throws Exception {
-		AweTaskHolder th = new AweTaskHolder(null, new TreeMap<String, String>());
+		AweTaskHolder th = new AweTaskHolder("false", null, "kbase-common-0.0.8.jar", new TreeMap<String, String>());
 		String jobId = th.prepareTask(TempTask.class, "sevret1").listToMap(Arrays.asList("k1", "v2", "k3", "v4"));
 		System.out.println("Job id: " + jobId);
 	}

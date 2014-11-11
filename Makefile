@@ -1,5 +1,5 @@
 TARGET ?= /kb/deployment
-TARGET-SCRIPT = $(TARGET)/bin/generic_java_script
+TARGET-SCRIPT = $(TARGET)/bin/java_generic_script
 JAR-PREFIX = kbase-common
 
 ANT = ant
@@ -58,7 +58,7 @@ deploy-scripts:
 	echo '#!/bin/bash' > $(TARGET-SCRIPT)
 	echo "JARS=$(TARGET)/lib/jars" >> $(TARGET-SCRIPT)
 	echo 'INITCP=$$JARS/kbase/common/kbase-common-dev-1415681177-41c302c.jar:$$JARS/jackson/jackson-annotations-2.2.3.jar:$$JARS/jackson/jackson-core-2.2.3.jar:$$JARS/jackson/jackson-databind-2.2.3.jar' >> $(TARGET-SCRIPT)
-	echo 'FULLCP=$$(java -cp $$INITCP us.kbase.common.awe.task.JavaGenericScript $$1 rsutormin)' >> $(TARGET-SCRIPT)
+	echo 'FULLCP=$$(java -cp $$INITCP us.kbase.common.awe.task.JavaGenericScript $$1 kbase)' >> $(TARGET-SCRIPT)
 	echo 'java -cp $$FULLCP us.kbase.common.awe.task.JavaGenericScript $$2 $$3 $$4 $$5 $$6 $$7' >> $(TARGET-SCRIPT)
 	chmod 775 $(TARGET-SCRIPT)
 
