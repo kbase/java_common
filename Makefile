@@ -1,3 +1,7 @@
+KB_TOP ?= /kb/deployment
+KB_RUNTIME ?= /kb/runtime
+JAVA_HOME ?= $KB_RUNTIME/java
+AWE_WORKER_SCRIPT = $(KB_TOP)/bin/java_generic_script
 JAR-PREFIX = kbase-common
 
 ANT = ant
@@ -43,9 +47,12 @@ test-service:
 
 test-scripts:
 	@echo "no scripts to test"
+
+test-worker:
+	echo "$$($(AWE_WORKER_SCRIPT) kbase-common-0.0.8.jar:jackson-annotations-2.2.3.jar:jackson-core-2.2.3.jar:jackson-databind-2.2.3.jar 12345 us.kbase.common.awe.test.TempTask listToMap 5B5B226B31222C227632222C226B34222C227635225D5D 7B7D)" | grep status=done || exit 1
+	echo "Test passed"
 	
-deploy:
-	@echo "nothing to deploy"
+deploy: deploy-worker
 
 deploy-client:
 	@echo "nothing to deploy"
@@ -55,6 +62,18 @@ deploy-docs:
 
 deploy-scripts:
 	@echo "nothing to deploy"
+
+deploy-worker:
+	echo '#!/bin/bash' > $(AWE_WORKER_SCRIPT)
+	echo 'export KB_TOP=$(KB_TOP)' >> $(AWE_WORKER_SCRIPT)
+	echo 'export KB_RUNTIME=$(KB_RUNTIME)' >> $(AWE_WORKER_SCRIPT)
+	echo 'export JAVA_HOME=$(JAVA_HOME)' >> $(AWE_WORKER_SCRIPT)
+	echo 'export PATH=$$KB_RUNTIME/bin:$$KB_TOP/bin:$$JAVA_HOME/bin:$$PATH' >> $(AWE_WORKER_SCRIPT)
+	echo 'JARS=$(KB_TOP)/lib/jars' >> $(AWE_WORKER_SCRIPT)
+	echo 'INITCP=$$JARS/kbase/common/kbase-common-0.0.8.jar:$$JARS/jackson/jackson-annotations-2.2.3.jar:$$JARS/jackson/jackson-core-2.2.3.jar:$$JARS/jackson/jackson-databind-2.2.3.jar' >> $(AWE_WORKER_SCRIPT)
+	echo 'FULLCP=$$(java -cp $$INITCP us.kbase.common.awe.task.JavaGenericScript $$1 kbase)' >> $(AWE_WORKER_SCRIPT)
+	echo 'java -cp $$FULLCP us.kbase.common.awe.task.JavaGenericScript $$2 $$3 $$4 $$5 $$6 $$7' >> $(AWE_WORKER_SCRIPT)
+	chmod 775 $(AWE_WORKER_SCRIPT)
 
 deploy-service:
 	@echo "nothing to deploy"

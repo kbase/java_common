@@ -1,10 +1,14 @@
 package us.kbase.common.awe;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 @JsonInclude(Include.NON_NULL)
@@ -24,6 +28,20 @@ public class AwfTask {
 	private String starteddate = null;
 	private String completeddate = null;
 	private Integer computetime = null;
+	private Map<String, Object> userattr = null;
+    @JsonProperty("AppVariables")
+	private Map<String, Object> appVariables = null;
+    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    
+    @JsonAnyGetter
+    public Map<java.lang.String, Object> getAdditionalProperties() {
+        return this.additionalProperties;
+    }
+
+    @JsonAnySetter
+    public void setAdditionalProperties(java.lang.String name, Object value) {
+        this.additionalProperties.put(name, value);
+    }
 	
 	public AwfCmd getCmd() {
 		return cmd;
@@ -143,5 +161,23 @@ public class AwfTask {
 	
 	public void setComputetime(Integer computetime) {
 		this.computetime = computetime;
+	}
+	
+	public Map<String, Object> getUserattr() {
+		return userattr;
+	}
+	
+	public void setUserattr(Map<String, Object> userattr) {
+		this.userattr = userattr;
+	}
+	
+    @JsonProperty("AppVariables")
+	public Map<String, Object> getAppVariables() {
+		return appVariables;
+	}
+	
+    @JsonProperty("AppVariables")
+	public void setAppVariables(Map<String, Object> appVariables) {
+		this.appVariables = appVariables;
 	}
 }

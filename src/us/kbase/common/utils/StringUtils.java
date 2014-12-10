@@ -1,5 +1,7 @@
 package us.kbase.common.utils;
 
+import java.nio.charset.Charset;
+
 /**
  * Miscellaneous methods for dealing with strings.
  * 
@@ -7,7 +9,8 @@ package us.kbase.common.utils;
  *
  */
 public class StringUtils {
-	
+	private static final String HEXES = "0123456789ABCDEF";
+
 	/**
 	 * Checks that a string is neither null or empty.
 	 * @param s the string to check.
@@ -84,5 +87,27 @@ public class StringUtils {
 						" exceeds the maximum length of " + length);
 			}
 		}
+	}
+
+	public static String stringToHex(String text) {
+		return bytesToHex(text.getBytes(Charset.forName("utf-8")));
+	}
+
+	public static String hexToString(String hex) {
+		return new String(hexToBytes(hex), Charset.forName("utf-8"));
+	}
+
+	public static String bytesToHex(byte[] raw) {
+		final StringBuilder hex = new StringBuilder(2 * raw.length);
+		for (final byte b : raw)
+			hex.append(HEXES.charAt((b & 0xF0) >> 4)).append(HEXES.charAt((b & 0x0F)));
+		return hex.toString();
+	}
+	
+	public static byte[] hexToBytes(String hex) {
+		byte[] ret = new byte[hex.length() / 2];
+		for (int i = 0; i < ret.length; i++)
+			ret[i] = Byte.parseByte(hex.substring(i * 2, (i + 1) * 2), 16);
+		return ret;
 	}
 }
