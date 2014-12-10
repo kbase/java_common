@@ -35,9 +35,9 @@ import org.slf4j.LoggerFactory;
  */
 public class GetMongoDB {
 	
-	private static final Logger LOGGER =
-			LoggerFactory.getLogger(GetMongoDB.class);
-
+	private static Logger getLogger() {
+		return LoggerFactory.getLogger(GetMongoDB.class);
+	}
 	
 	private static final Map<String, MongoClient> HOST_TO_CLIENT = 
 			new HashMap<String, MongoClient>();
@@ -118,7 +118,8 @@ public class GetMongoDB {
 					throw (IOException) men.getCause();
 				}
 				if (retries % logIntervalCount == 0) {
-					LOGGER.info("Retrying MongoDB connection {}/{}, attempt {}/{}",
+					getLogger().info(
+							"Retrying MongoDB connection {}/{}, attempt {}/{}",
 							host, database, retries, retryCount);
 				}
 				Thread.sleep(1000);
@@ -188,7 +189,8 @@ public class GetMongoDB {
 					throw (IOException) men.getCause();
 				}
 				if (retries % logIntervalCount == 0) {
-					LOGGER.info("Retrying MongoDB connection {}/{}, attempt {}/{}",
+					getLogger().info(
+							"Retrying MongoDB connection {}/{}, attempt {}/{}",
 							host, database, retries, retryCount);
 				}
 				Thread.sleep(1000);
