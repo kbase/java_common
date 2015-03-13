@@ -126,8 +126,7 @@ public class JacksonTupleModule extends SimpleModule {
 			try {
 				Object res = retClass.newInstance();
 				if (!p.isExpectedStartArrayToken()) {
-					System.out.println("Bad parse in TupleDeserializer: " + p.getCurrentToken());
-					return null;
+					throw new JsonMappingException("Tuple array is expected but found " + p.getCurrentToken());
 				}
 				JsonToken t = p.nextToken();
 				for (int i = 0; i < types.size(); i++) {
