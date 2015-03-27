@@ -393,8 +393,9 @@ public class JsonServerServlet extends HttpServlet {
 				return;
 			}
 			try {
+			    boolean notVoid = !rpcMethod.getReturnType().equals(Void.TYPE);
 				boolean isTuple = rpcMethod.getAnnotation(JsonServerMethod.class).tuple();
-				if (!isTuple) {
+				if (notVoid && !isTuple) {
 					result = Arrays.asList(result);
 				}
 				Map<String, Object> ret = new LinkedHashMap<String, Object>();
