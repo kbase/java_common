@@ -19,7 +19,7 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
 
-VERSION: 0.0.8 (Released 10/20/2014)
+VERSION: 0.0.8 (Released 11/10/2014)
 --------------------------------------
 
 NEW FEATURES:
