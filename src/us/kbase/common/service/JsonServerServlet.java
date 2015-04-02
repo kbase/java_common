@@ -533,6 +533,7 @@ public class JsonServerServlet extends HttpServlet {
 	                        Map<String, Object> ret = new LinkedHashMap<String, Object>();
 	                        ret.put("version", "1.1");
 	                        ret.put("error", error);
+	                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 	                        mapper.writeValue(new UnclosableOutputStream(output), ret);
 	                        output.flush();
 	                        return;
