@@ -216,19 +216,19 @@ public class JsonClientCaller {
 		}
 	}
 		
-	public <ARG, RET> RET jsonrpcCall(String method, ARG arg,
-			TypeReference<RET> cls, boolean ret, boolean authRequired)
+	public <ARG, RET> RET jsonrpcCall(String method, ARG arg, TypeReference<RET> cls, 
+	        boolean ret, boolean authRequired, Context... context)
 			throws IOException, JsonClientException {
 		HttpURLConnection conn = setupCall(authRequired);
 		String id = ("" + Math.random()).replace(".", "");
 		if (streamRequest) {
 			// Calculate content-length before
-			final long size = calculateResponseLength(method, arg, id);
+			final long size = calculateResponseLength(method, arg, id, context);
 			// Set content-length
 			conn.setFixedLengthStreamingMode(size);
 		}
 		// Write real data into http output stream
-		writeRequestData(method, arg, conn.getOutputStream(), id);
+		writeRequestData(method, arg, conn.getOutputStream(), id, context);
 		// Read response
 		int code = conn.getResponseCode();
 		conn.getResponseMessage();
@@ -332,7 +332,7 @@ public class JsonClientCaller {
 	}
 
 	private <ARG> long calculateResponseLength(String method, ARG arg,
-			String id) throws IOException {
+			String id, Context... context) throws IOException {
 		final long[] sizeWrapper = new long[] {0};
 		OutputStream os = new OutputStream() {
 			@Override
@@ -342,7 +342,7 @@ public class JsonClientCaller {
 			@Override
 			public void write(byte[] b, int o, int l) {sizeWrapper[0] += l;}
 		};
-		writeRequestData(method, arg, os, id);
+		writeRequestData(method, arg, os, id, context);
 		return sizeWrapper[0];
 	}
 
@@ -362,7 +362,7 @@ public class JsonClientCaller {
 			throw new JsonClientException("Expected " + expected + " token but " + actual + " was occured");
 	}
 		
-	public void writeRequestData(String method, Object arg, OutputStream os, String id) 
+	public void writeRequestData(String method, Object arg, OutputStream os, String id, Context... context) 
 			throws IOException {
 		JsonGenerator g = mapper.getFactory().createGenerator(os, JsonEncoding.UTF8);
 		g.writeStartObject();
@@ -370,6 +370,8 @@ public class JsonClientCaller {
 		g.writeStringField("method", method);
 		g.writeStringField("version", "1.1");
 		g.writeStringField("id", id);
+		if (context != null && context.length == 1)
+	        g.writeObjectField("context", context[0]);		    
 		g.writeEndObject();
 		g.close();
 		os.flush();

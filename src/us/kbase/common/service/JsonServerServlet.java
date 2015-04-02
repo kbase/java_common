@@ -414,6 +414,11 @@ public class JsonServerServlet extends HttpServlet {
 			if (origRpcName.equals(rpcName)) {
 			    int rpcArgCount = rpcMethod.getGenericParameterTypes().length;
 			    Object[] methodValues = new Object[rpcArgCount];			
+                if (rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].isArray() && 
+                        rpcMethod.getParameterTypes()[rpcArgCount - 1].getComponentType().equals(Context.class)) {
+                    rpcArgCount--;
+                    methodValues[rpcArgCount] = new Context[] {context};
+                }
 			    if (rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].equals(AuthToken.class)) {
 			        if (token != null || !rpcMethod.getAnnotation(JsonServerMethod.class).authOptional()) {
 			            try {
@@ -426,6 +431,7 @@ public class JsonServerServlet extends HttpServlet {
 			            }
 			        }
 			        rpcArgCount--;
+			        methodValues[rpcArgCount] = userProfile;
 			    }
 			    if (startupFailed) {
 			        writeError(response, -32603, "The server did not start up properly. Please check the log files for the cause.", output);
@@ -459,8 +465,6 @@ public class JsonServerServlet extends HttpServlet {
 			            return;
 			        }
 			    }
-			    if (userProfile != null && methodValues[methodValues.length - 1] == null)
-			        methodValues[methodValues.length - 1] = userProfile;
 			    Object result;
 			    try {
 			        logHeaders(requestHeaderXForwardedFor);
