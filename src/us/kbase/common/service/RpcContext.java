@@ -1,4 +1,3 @@
-
 package us.kbase.common.service;
 
 import java.util.HashMap;
@@ -13,7 +12,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 
 /**
- * <p>Original spec-file type: Context</p>
+ * <p>Original spec-file type: RpcContext</p>
  * <pre>
  * call_stack - upstream calls details including nested service calls and 
  *     parent jobs where calls are listed in order from outer to inner.
@@ -23,12 +22,15 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Generated("com.googlecode.jsonschema2pojo")
 @JsonPropertyOrder({
-    "call_stack"
+    "call_stack",
+    "run_id"
 })
-public class Context {
+public class RpcContext {
 
     @JsonProperty("call_stack")
     private List<MethodCall> callStack;
+    @JsonProperty("run_id")
+    private String runId;
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
     @JsonProperty("call_stack")
@@ -41,8 +43,23 @@ public class Context {
         this.callStack = callStack;
     }
 
-    public Context withCallStack(List<MethodCall> callStack) {
+    public RpcContext withCallStack(List<MethodCall> callStack) {
         this.callStack = callStack;
+        return this;
+    }
+
+    @JsonProperty("run_id")
+    public String getRunId() {
+        return runId;
+    }
+
+    @JsonProperty("run_id")
+    public void setRunId(String runId) {
+        this.runId = runId;
+    }
+
+    public RpcContext withRunId(String runId) {
+        this.runId = runId;
         return this;
     }
 
@@ -58,7 +75,7 @@ public class Context {
 
     @Override
     public String toString() {
-        return ((((("Context"+" [callStack=")+ callStack)+", additionalProperties=")+ additionalProperties)+"]");
+        return ((((((("RpcContext"+" [callStack=")+ callStack)+", runId=")+ runId)+", additionalProperties=")+ additionalProperties)+"]");
     }
 
 }

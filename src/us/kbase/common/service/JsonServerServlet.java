@@ -338,23 +338,20 @@ public class JsonServerServlet extends HttpServlet {
                 writeError(respStatus, -32601, "JSON RPC params property is not defined", output);
                 return;
             }
-            Context context = rpcCallData.getContext();
-            if (context == null)
-                context = new Context();
+            if (!rpcName.contains(".")) {
+                rpcName = specServiceName + "." + rpcName;
+                rpcCallData.setMethod(rpcName);
+            }
+            RpcContext context = rpcCallData.getContext();
+            if (context == null) {
+                context = new RpcContext();
+                rpcCallData.setContext(context);
+            }
             if (context.getCallStack() == null)
                 context.setCallStack(new ArrayList<MethodCall>());
-            MethodCall currentCall = new MethodCall().withMethodParams(paramsList)
-                    .withTime(utcDatetimeFormat.formatDate(new Date()));
-            context.getCallStack().add(currentCall);
-            if (rpcName.contains(".")) {
-                int pos = rpcName.indexOf('.');
-                currentCall.setService(rpcName.substring(0, pos));
-                currentCall.setMethod(rpcName.substring(pos + 1));
-            } else {
-                currentCall.setService(specServiceName);
-                currentCall.setMethod(rpcName);
-            }
-			processRpcCall(context, token, info, requestHeaderXFF, respStatus, output);
+            context.getCallStack().add(new MethodCall().withMethod(rpcName)
+                    .withTime(utcDatetimeFormat.formatDate(new Date())));
+			processRpcCall(rpcCallData, token, info, requestHeaderXFF, respStatus, output);
 		} catch (Exception ex) {
 		    writeError(respStatus, -32400, "Unexpected internal error (" + ex.getMessage() + ")", ex, output);    
 		} finally {
@@ -383,8 +380,8 @@ public class JsonServerServlet extends HttpServlet {
 	    OutputStream os = null;
 	    try {
 	        os = new FileOutputStream(output);
-	        Context context = mapper.readValue(input, Context.class);
-	        processRpcCall(context, token, info, null, response, os);
+	        RpcCallData rpcCallData = mapper.readValue(input, RpcCallData.class);
+	        processRpcCall(rpcCallData, token, info, null, response, os);
 	    } catch (Throwable ex) {
             writeError(response, -32400, "Unexpected internal error (" + ex.getMessage() + ")", ex, os);    
 	    } finally {
@@ -396,13 +393,14 @@ public class JsonServerServlet extends HttpServlet {
 	    return responseCode[0];
 	}
 	
-	protected void processRpcCall(Context context, String token, JsonServerSyslog.RpcInfo info, 
+	protected void processRpcCall(RpcCallData rpcCallData, String token, JsonServerSyslog.RpcInfo info, 
 	        String requestHeaderXForwardedFor, ResponseStatusSetter response, OutputStream output) {
-	    MethodCall currentCall = context.getCallStack().get(context.getCallStack().size() - 1);
-        info.setModule(currentCall.getService());
-        info.setMethod(currentCall.getMethod());
-	    String rpcName = currentCall.getService() + "." + currentCall.getMethod();
-	    List<UObject> paramsList = currentCall.getMethodParams();
+        RpcContext context = rpcCallData.getContext();
+	    String rpcName = rpcCallData.getMethod();
+	    String[] serviceAndMethod = rpcName.split("\\.");
+        info.setModule(serviceAndMethod[0]);
+        info.setMethod(serviceAndMethod[1]);
+	    List<UObject> paramsList = rpcCallData.getParams();
 	    AuthToken userProfile = null;
 	    try {
 			Method rpcMethod = rpcCache.get(rpcName);
@@ -415,9 +413,9 @@ public class JsonServerServlet extends HttpServlet {
 			    int rpcArgCount = rpcMethod.getGenericParameterTypes().length;
 			    Object[] methodValues = new Object[rpcArgCount];			
                 if (rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].isArray() && 
-                        rpcMethod.getParameterTypes()[rpcArgCount - 1].getComponentType().equals(Context.class)) {
+                        rpcMethod.getParameterTypes()[rpcArgCount - 1].getComponentType().equals(RpcContext.class)) {
                     rpcArgCount--;
-                    methodValues[rpcArgCount] = new Context[] {context};
+                    methodValues[rpcArgCount] = new RpcContext[] {context};
                 }
 			    if (rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].equals(AuthToken.class)) {
 			        if (token != null || !rpcMethod.getAnnotation(JsonServerMethod.class).authOptional()) {
@@ -514,22 +512,20 @@ public class JsonServerServlet extends HttpServlet {
 	                List<Object> runJobParams = new ArrayList<Object>();
 	                Map<String, Object> paramMap = new LinkedHashMap<String, Object>();
 	                runJobParams.add(paramMap);
-	                int pos = origRpcName.indexOf('.');
-	                paramMap.put("service", origRpcName.substring(0, pos));
 	                paramMap.put("service_ver", getServiceVersion());
-	                paramMap.put("method", origRpcName.substring(pos + 1));
-	                paramMap.put("method_params", paramsList);
-	                paramMap.put("context", context);
+	                paramMap.put("method", origRpcName);
+	                paramMap.put("params", paramsList);
+	                paramMap.put("rpc_context", context);
 	                TypeReference<List<Object>> retType = new TypeReference<List<Object>>() {};
 	                result = jobService.jsonrpcCall("KBaseJobService.run_job", runJobParams, retType, true, true);
 			    } else if (rpcName.equals(origRpcName + "_check")) {
-	                TypeReference<List<Map<String, UObject>>> retType = new TypeReference<List<Map<String, UObject>>>() {};
-	                List<Map<String, UObject>> jobStateList = jobService.jsonrpcCall("KBaseJobService.check_job", paramsList, retType, true, true);
-	                Map<String, UObject> jobState = jobStateList.get(0);
-	                Long finished = jobState.get("finished").asClassInstance(Long.class);
+	                TypeReference<List<JobState<UObject>>> retType = new TypeReference<List<JobState<UObject>>>() {};
+	                List<JobState<UObject>> jobStateList = jobService.jsonrpcCall("KBaseJobService.check_job", paramsList, retType, true, true);
+	                JobState<UObject> jobState = jobStateList.get(0);
+	                Long finished = jobState.getFinished();
 	                if (finished != 0L) {
-	                    UObject error = jobState.get("error");
-	                    if (error != null && !error.isNull()) {
+	                    Object error = jobState.getAdditionalProperties().get("error");
+	                    if (error != null) {
 	                        Map<String, Object> ret = new LinkedHashMap<String, Object>();
 	                        ret.put("version", "1.1");
 	                        ret.put("error", error);
@@ -540,8 +536,7 @@ public class JsonServerServlet extends HttpServlet {
 	                    }
 	                }
 	                result = new ArrayList<Object>();
-	                result.add(finished);
-	                result.add(jobState.get("result"));
+	                result.add(jobState);
 			    } else {
 			        writeError(response, -32601, "Can not find method [" + rpcName + "] in server class " + getClass().getName(), output);
 			        return;
@@ -743,7 +738,7 @@ public class JsonServerServlet extends HttpServlet {
 		private String method;
 		private List<UObject> params;
 		private Object version;
-		private Context context;
+		private RpcContext context;
 		
 		public Object getId() {
 			return id;
@@ -777,11 +772,11 @@ public class JsonServerServlet extends HttpServlet {
 			this.version = version;
 		}
 		
-		public Context getContext() {
+		public RpcContext getContext() {
             return context;
         }
 		
-		public void setContext(Context context) {
+		public void setContext(RpcContext context) {
             this.context = context;
         }
 	}

@@ -217,7 +217,7 @@ public class JsonClientCaller {
 	}
 		
 	public <ARG, RET> RET jsonrpcCall(String method, ARG arg, TypeReference<RET> cls, 
-	        boolean ret, boolean authRequired, Context... context)
+	        boolean ret, boolean authRequired, RpcContext... context)
 			throws IOException, JsonClientException {
 		HttpURLConnection conn = setupCall(authRequired);
 		String id = ("" + Math.random()).replace(".", "");
@@ -332,7 +332,7 @@ public class JsonClientCaller {
 	}
 
 	private <ARG> long calculateResponseLength(String method, ARG arg,
-			String id, Context... context) throws IOException {
+			String id, RpcContext... context) throws IOException {
 		final long[] sizeWrapper = new long[] {0};
 		OutputStream os = new OutputStream() {
 			@Override
@@ -362,7 +362,7 @@ public class JsonClientCaller {
 			throw new JsonClientException("Expected " + expected + " token but " + actual + " was occured");
 	}
 		
-	public void writeRequestData(String method, Object arg, OutputStream os, String id, Context... context) 
+	public void writeRequestData(String method, Object arg, OutputStream os, String id, RpcContext... context) 
 			throws IOException {
 		JsonGenerator g = mapper.getFactory().createGenerator(os, JsonEncoding.UTF8);
 		g.writeStartObject();
