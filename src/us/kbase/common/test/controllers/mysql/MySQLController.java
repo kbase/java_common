@@ -50,7 +50,6 @@ public class MySQLController {
 	 * @param mysqlInstallExe
 	 * @param rootTempDir where to place temp files. Cannot have any system
 	 * specific info (~, $HOME, etc).
-	 * @param deleteTempDirOnExit
 	 * @throws Exception
 	 */
 	public MySQLController(
@@ -112,6 +111,10 @@ public class MySQLController {
 		return tempDir;
 	}
 	
+	/** Shut down the server and optionally delete temporary files.
+	 * @param deleteTempFiles delete temporary test files if true.
+	 * @throws IOException if an IO error occurs.
+	 */
 	public void destroy(boolean deleteTempFiles) throws IOException {
 		if (mysql != null) {
 			mysql.destroy();
