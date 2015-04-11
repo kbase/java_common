@@ -42,8 +42,15 @@ public class GetMongoDB {
 	private static final Map<String, MongoClient> HOST_TO_CLIENT = 
 			new HashMap<String, MongoClient>();
 	
-	private static MongoClient getMongoClient(final String host) throws
-			UnknownHostException, InvalidHostException {
+	public synchronized static void closeAllConnections() {
+		for (final String host: HOST_TO_CLIENT.keySet()) {
+			HOST_TO_CLIENT.get(host).close();
+		}
+		HOST_TO_CLIENT.clear();
+	}
+	
+	private synchronized static MongoClient getMongoClient(final String host)
+			throws UnknownHostException, InvalidHostException {
 		//Only make one instance of MongoClient per JVM per mongo docs
 		final MongoClient client;
 		if (!HOST_TO_CLIENT.containsKey(host)) {
