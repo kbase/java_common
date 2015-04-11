@@ -4,6 +4,18 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.0.10 (Released 4/10/2015)
+--------------------------------------
+
+NEW FEATURES:
+- N/A
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- Add method to close all mongo connections to GetMongoDB class.
+
+ANTICIPATED FUTURE DEVELOPMENTS:
+- None
+
 VERSION: 0.0.9 (Released 3/27/2015)
 --------------------------------------
 
