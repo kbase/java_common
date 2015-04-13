@@ -7,6 +7,7 @@ import static us.kbase.common.test.controllers.ControllerCommon.makeTempDirs;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
@@ -38,13 +39,26 @@ public class MongoController {
 			final String mongoExe,
 			final Path rootTempDir)
 					throws Exception {
+		this(mongoExe, rootTempDir, false);
+	}
+	
+	public MongoController(
+			final String mongoExe,
+			final Path rootTempDir,
+			final boolean useWiredTiger)
+					throws Exception {
 		checkExe(mongoExe, "mongod server");
 		tempDir = makeTempDirs(rootTempDir, "MongoController-", tempDirectories);
 		port = findFreePort();
 
-		ProcessBuilder servpb = new ProcessBuilder(mongoExe, "--port",
-				"" + port, "--dbpath", tempDir.resolve(DATA_DIR).toString(),
-				"--nojournal")
+		List<String> command = new LinkedList<String>();
+		command.addAll(Arrays.asList(mongoExe, "--port", "" + port,
+				"--dbpath", tempDir.resolve(DATA_DIR).toString(),
+				"--nojournal"));
+		if (useWiredTiger) {
+			command.addAll(Arrays.asList("--storageEngine", "wiredTiger"));
+		}
+		ProcessBuilder servpb = new ProcessBuilder(command)
 				.redirectErrorStream(true)
 				.redirectOutput(tempDir.resolve("mongo.log").toFile());
 		
