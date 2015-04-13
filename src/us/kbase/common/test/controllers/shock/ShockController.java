@@ -82,6 +82,7 @@ public class ShockController {
 				.redirectOutput(tempDir.resolve("shock_server.log").toFile());
 		
 		shock = servpb.start();
+		Thread.sleep(1000); //wait for server to start
 	}
 
 	public int getServerPort() {
