@@ -46,6 +46,9 @@ public class JsonServerSyslog {
 	private static final long startMillis = System.currentTimeMillis();
 	private static final long startNanos = System.nanoTime();
 	
+	private static boolean staticUseSyslog = true;
+	private static String staticMlogFile = null;
+	
 	public JsonServerSyslog(String serviceName, String configFileParam) {
 		this(serviceName, configFileParam, -1);
 	}
@@ -53,14 +56,18 @@ public class JsonServerSyslog {
 	public JsonServerSyslog(String serviceName, String configFileParam, int defultLogLevel) {
 		this.serviceName = serviceName;
 		logLevel = defultLogLevel;
-		UnixSocketSyslogConfig cfg = new UnixSocketSyslogConfig();
-		if (System.getProperty("os.name").toLowerCase().startsWith("mac"))
-			cfg.setPath("/var/run/syslog");
-		cfg.setFacility(SyslogConstants.FACILITY_LOCAL1);
-		cfg.removeAllMessageModifiers();
-		cfg.setIdent(null);
-		log = new UnixSocketSyslog();
-		log.initialize(SyslogConstants.UNIX_SOCKET, cfg);
+        if (staticUseSyslog) {
+            UnixSocketSyslogConfig cfg = new UnixSocketSyslogConfig();
+            if (System.getProperty("os.name").toLowerCase().startsWith("mac"))
+                cfg.setPath("/var/run/syslog");
+            cfg.setFacility(SyslogConstants.FACILITY_LOCAL1);
+            cfg.removeAllMessageModifiers();
+            cfg.setIdent(null);
+		    log = new UnixSocketSyslog();
+		    log.initialize(SyslogConstants.UNIX_SOCKET, cfg);
+		} else {
+		    log = null;
+		}
 		this.config = new Config(configFileParam, serviceName);
 	}
 
@@ -245,6 +252,22 @@ public class JsonServerSyslog {
 		//return ret.substring(0, ret.length() - 9) + "." + ret.substring(ret.length() - 9, ret.length() - 3);
 	}
 
+	public static boolean isStaticUseSyslog() {
+        return staticUseSyslog;
+    }
+	
+	public static void setStaticUseSyslog(boolean staticUseSyslog) {
+        JsonServerSyslog.staticUseSyslog = staticUseSyslog;
+    }
+	
+	public static String getStaticMlogFile() {
+        return staticMlogFile;
+    }
+	
+	public static void setStaticMlogFile(String staticMlogFile) {
+        JsonServerSyslog.staticMlogFile = staticMlogFile;
+    }
+	
 	private class Config {
 		private String configPathParam;
 		private String sectionName;
@@ -294,7 +317,9 @@ public class JsonServerSyslog {
 				Map<String, String> section = ini.get(sectionName);
 				if (section == null)
 					return;
-				String filePath = section.get("mlog_log_file");
+				String filePath = staticMlogFile;
+                if (filePath == null)
+                    filePath = section.get("mlog_log_file");
 				if (filePath != null)
 					externalLogFile = new File(filePath);
 				String logLevelText = section.get("mlog_log_level");
@@ -310,7 +335,8 @@ public class JsonServerSyslog {
 	public static class SyslogOutput {
 		public void logToSystem(SyslogIF log, int level, String message) {
 			try {
-				log.log(level, message);
+			    if (log != null)
+			        log.log(level, message);
 				//log.flush();
 			} catch (Throwable ex) {
 				System.out.println("JsonServerSyslog: Error writing to syslog (" + ex.getMessage() + "), see user defined log-file instead of syslog.");
