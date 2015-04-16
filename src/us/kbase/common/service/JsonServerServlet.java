@@ -1,9 +1,11 @@
 package us.kbase.common.service;
 
 import us.kbase.auth.AuthException;
+import us.kbase.auth.AuthConfig;
 import us.kbase.auth.AuthService;
 import us.kbase.auth.AuthToken;
 import us.kbase.auth.AuthUser;
+import us.kbase.auth.ConfigurableAuthService;
 import us.kbase.common.utils.UTCDateFormat;
 
 import java.io.BufferedOutputStream;
@@ -18,6 +20,7 @@ import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -65,7 +68,7 @@ public class JsonServerServlet extends HttpServlet {
 	private JsonServerSyslog userLogger;
 	final private static String KB_DEP = "KB_DEPLOYMENT_CONFIG";
 	final private static String KB_SERVNAME = "KB_SERVICE_NAME";
-    private static final String KB_JOB_SERVICE_URL = "KB_JOB_SERVICE_URL";
+    private static final String CONFIG_AUTH_SERVICE_URL_PARAM = "auth-service-url";
 	private static final String CONFIG_JOB_SERVICE_URL_PARAM = "job-service-url";
 	protected Map<String, String> config = new HashMap<String, String>();
 	private Server jettyServer = null;
@@ -420,7 +423,7 @@ public class JsonServerServlet extends HttpServlet {
 			    if (rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].equals(AuthToken.class)) {
 			        if (token != null || !rpcMethod.getAnnotation(JsonServerMethod.class).authOptional()) {
 			            try {
-			                userProfile = validateToken(token);
+			                userProfile = validateToken(token, config.get(CONFIG_AUTH_SERVICE_URL_PARAM));
 			                if (userProfile != null)
 			                    info.setUser(userProfile.getClientId());
 			            } catch (Throwable ex) {
@@ -499,7 +502,7 @@ public class JsonServerServlet extends HttpServlet {
                     return;
 	            }
                 try {
-                    userProfile = validateToken(token);
+                    userProfile = validateToken(token, config.get(CONFIG_AUTH_SERVICE_URL_PARAM));
                     if (userProfile != null)
                         info.setUser(userProfile.getClientId());
                 } catch (Throwable ex) {
@@ -609,7 +612,7 @@ public class JsonServerServlet extends HttpServlet {
 		this.maxRPCPackageSize = maxRPCPackageSize;
 	}
 	
-	private static AuthToken validateToken(String token)
+	private static AuthToken validateToken(String token, String authUrl)
 			throws AuthException, IOException {
 		if (token == null)
 			throw new AuthException(
@@ -617,12 +620,21 @@ public class JsonServerServlet extends HttpServlet {
 		final AuthToken ret = new AuthToken(token);
 		final boolean validToken;
 		try {
-			validToken = AuthService.validateToken(ret);
+		    if (authUrl == null) {
+		        validToken = AuthService.validateToken(ret);
+		    } else {
+		        validToken = new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
+		                new URL(authUrl))).validateToken(ret);
+		    }
 		} catch (UnknownHostException uhe) {
 			//message from UHE is only the host name
 			throw new AuthException(
-					"Could not contact Authorization Service host to validate user token: "
-							+ uhe.getMessage(), uhe);
+			        "Could not contact Authorization Service host to validate user token: " + 
+			                uhe.getMessage(), uhe);
+		} catch (URISyntaxException use) {
+		    throw new AuthException(
+		            "Could not contact Authorization Service url (" + (authUrl == null ? "default" : 
+		                authUrl) + ") to validate user token: " + use.getMessage(), use);
 		}
 		if (!validToken) {
 			throw new AuthException("User token was invalid");
@@ -630,9 +642,20 @@ public class JsonServerServlet extends HttpServlet {
 		return ret;
 	}
 
-	public static AuthUser getUserProfile(AuthToken token)
+	public static AuthUser getUserProfile(AuthToken token, String authUrl)
 			throws IOException, AuthException {
-		return AuthService.getUserFromToken(token);
+	    if (authUrl == null) {
+	        return AuthService.getUserFromToken(token);
+	    } else {
+	        try {
+	            return new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
+	                    new URL(authUrl))).getUserFromToken(token);
+	        } catch (URISyntaxException use) {
+	            throw new AuthException(
+	                    "Could not contact Authorization Service url (" + (authUrl == null ? "default" : 
+	                        authUrl) + ") to get user profile: " + use.getMessage(), use);
+	        }
+	    }
 	}
 	
 	private void writeError(ResponseStatusSetter response, int code, String message, OutputStream output) {
@@ -711,15 +734,10 @@ public class JsonServerServlet extends HttpServlet {
 	}
 	
 	private JsonClientCaller getJobServiceClient(AuthToken token) throws Exception {
-	    String url = System.getProperty(KB_JOB_SERVICE_URL);
+	    String url = config.get(CONFIG_JOB_SERVICE_URL_PARAM);
 	    if (url == null)
-	        url = System.getenv(KB_JOB_SERVICE_URL);
-	    if (url == null)
-	        url = config.get(CONFIG_JOB_SERVICE_URL_PARAM);
-	    if (url == null)
-	        throw new IllegalStateException("Neither '" + CONFIG_JOB_SERVICE_URL_PARAM + "' " +
-	                "parameter is defined in configuration nor '" + KB_JOB_SERVICE_URL + "' " +
-	                "variable is defined in system");
+	        throw new IllegalStateException("'" + CONFIG_JOB_SERVICE_URL_PARAM + "' " +
+	                "parameter is not defined in configuration");
 	    JsonClientCaller ret = new JsonClientCaller(new URL(url), token);
 	    ret.setInsecureHttpConnectionAllowed(true);
 	    return ret;
