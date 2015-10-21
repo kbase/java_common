@@ -116,7 +116,7 @@ public class JsonClientCaller {
 
 	/** Deprecated - use isInsecureHttpConnectionAllowed().
 	 * @deprecated
-	 * @return
+	 * @return true if insecure connections are allowed.
 	 */
 	public boolean isAuthAllowedForHttp() {
 		return allowInsecureHttp;

@@ -9,9 +9,11 @@ import us.kbase.auth.ConfigurableAuthService;
 import us.kbase.common.utils.UTCDateFormat;
 
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -69,6 +71,7 @@ public class JsonServerServlet extends HttpServlet {
 	final private static String KB_DEP = "KB_DEPLOYMENT_CONFIG";
 	final private static String KB_SERVNAME = "KB_SERVICE_NAME";
     private static final String CONFIG_AUTH_SERVICE_URL_PARAM = "auth-service-url";
+    private static final String KB_JOB_SERVICE_URL = "KB_JOB_SERVICE_URL";
 	private static final String CONFIG_JOB_SERVICE_URL_PARAM = "job-service-url";
 	protected Map<String, String> config = new HashMap<String, String>();
 	private Server jettyServer = null;
@@ -354,7 +357,7 @@ public class JsonServerServlet extends HttpServlet {
                 context.setCallStack(new ArrayList<MethodCall>());
             context.getCallStack().add(new MethodCall().withMethod(rpcName)
                     .withTime(utcDatetimeFormat.formatDate(new Date())));
-			processRpcCall(rpcCallData, token, info, requestHeaderXFF, respStatus, output);
+			processRpcCall(rpcCallData, token, info, requestHeaderXFF, respStatus, output, false);
 		} catch (Exception ex) {
 		    writeError(respStatus, -32400, "Unexpected internal error (" + ex.getMessage() + ")", ex, output);    
 		} finally {
@@ -382,9 +385,15 @@ public class JsonServerServlet extends HttpServlet {
         };
 	    OutputStream os = null;
 	    try {
+	        File tokenFile = new File(token);
+	        if (tokenFile.exists()) {
+	            BufferedReader br = new BufferedReader(new FileReader(tokenFile));
+	            token = br.readLine();
+	            br.close();
+	        }
 	        os = new FileOutputStream(output);
 	        RpcCallData rpcCallData = mapper.readValue(input, RpcCallData.class);
-	        processRpcCall(rpcCallData, token, info, null, response, os);
+	        processRpcCall(rpcCallData, token, info, null, response, os, true);
 	    } catch (Throwable ex) {
             writeError(response, -32400, "Unexpected internal error (" + ex.getMessage() + ")", ex, os);    
 	    } finally {
@@ -397,7 +406,8 @@ public class JsonServerServlet extends HttpServlet {
 	}
 	
 	protected void processRpcCall(RpcCallData rpcCallData, String token, JsonServerSyslog.RpcInfo info, 
-	        String requestHeaderXForwardedFor, ResponseStatusSetter response, OutputStream output) {
+	        String requestHeaderXForwardedFor, ResponseStatusSetter response, OutputStream output,
+	        boolean commandLine) {
         RpcContext context = rpcCallData.getContext();
 	    String rpcName = rpcCallData.getMethod();
 	    String[] serviceAndMethod = rpcName.split("\\.");
@@ -413,6 +423,10 @@ public class JsonServerServlet extends HttpServlet {
 			}
 			String origRpcName = rpcMethod.getAnnotation(JsonServerMethod.class).rpc();
 			if (origRpcName.equals(rpcName)) {
+			    if (!(commandLine || rpcMethod.getAnnotation(JsonServerMethod.class).sync())) {
+	                writeError(response, -32601, "Method " + rpcName + " cannot be run synchronously", output);
+	                return;			        
+			    }
 			    int rpcArgCount = rpcMethod.getGenericParameterTypes().length;
 			    Object[] methodValues = new Object[rpcArgCount];			
                 if (rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].isArray() && 
@@ -734,14 +748,19 @@ public class JsonServerServlet extends HttpServlet {
 	}
 	
 	private JsonClientCaller getJobServiceClient(AuthToken token) throws Exception {
-	    String url = config.get(CONFIG_JOB_SERVICE_URL_PARAM);
-	    if (url == null)
-	        throw new IllegalStateException("'" + CONFIG_JOB_SERVICE_URL_PARAM + "' " +
-	                "parameter is not defined in configuration");
-	    JsonClientCaller ret = new JsonClientCaller(new URL(url), token);
-	    ret.setInsecureHttpConnectionAllowed(true);
-	    return ret;
-	}
+	    String url = System.getProperty(KB_JOB_SERVICE_URL);
+        if (url == null)
+            url = System.getenv(KB_JOB_SERVICE_URL);
+        if (url == null)
+            url = config.get(CONFIG_JOB_SERVICE_URL_PARAM);
+        if (url == null)
+            throw new IllegalStateException("Neither '" + CONFIG_JOB_SERVICE_URL_PARAM + "' " +
+                    "parameter is defined in configuration nor '" + KB_JOB_SERVICE_URL + "' " +
+                    "variable is defined in system");
+        JsonClientCaller ret = new JsonClientCaller(new URL(url), token);
+        ret.setInsecureHttpConnectionAllowed(true);
+        return ret;
+    }
 	
 	public String getServiceVersion() {
         return serviceVersion;
