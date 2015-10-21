@@ -16,6 +16,18 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
 
+VERSION: 0.0.11 (Released 10/21/2015)
+--------------------------------------
+
+NEW FEATURES:
+- N/A
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- Java Server Servlet was redesigned in order to support async server calls
+
+ANTICIPATED FUTURE DEVELOPMENTS:
+- None
+
 VERSION: 0.0.9 (Released 3/27/2015)
 --------------------------------------
 
