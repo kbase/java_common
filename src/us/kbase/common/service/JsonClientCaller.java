@@ -1,8 +1,10 @@
 package us.kbase.common.service;
 
+import us.kbase.auth.AuthConfig;
 import us.kbase.auth.AuthException;
 import us.kbase.auth.AuthService;
 import us.kbase.auth.AuthToken;
+import us.kbase.auth.ConfigurableAuthService;
 import us.kbase.auth.TokenExpiredException;
 
 import java.net.*;
@@ -71,21 +73,37 @@ public class JsonClientCaller {
 		mapper = new ObjectMapper().registerModule(new JacksonTupleModule());
 	}
 
-	public JsonClientCaller(URL url, AuthToken accessToken) throws UnauthorizedException, IOException {
+	public JsonClientCaller(URL url, AuthToken accessToken, URL... authServiceUrl) throws UnauthorizedException, IOException {
 		this(url);
 		this.accessToken = accessToken;
 		try {
-			AuthService.validateToken(accessToken);
+		    boolean validToken;
+		    if (authServiceUrl == null || authServiceUrl.length < 1 || authServiceUrl[0] == null) {
+		        validToken = AuthService.validateToken(accessToken);
+		    } else {
+		        if (authServiceUrl.length > 1)
+		            throw new UnauthorizedException("There is more than one auth service url argument passed");
+		        try {
+		            validToken = new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
+		                    authServiceUrl[0])).validateToken(accessToken);
+		        } catch (URISyntaxException use) {
+		            throw new UnauthorizedException(
+		                    "Could not contact AuthService url (" + authServiceUrl + 
+		                    ") to validate user token: " + use.getMessage(), use);
+		        }
+		    }
+	        if (!validToken)
+	            throw new UnauthorizedException("Token validation failed");
 		} catch (TokenExpiredException ex) {
 			throw new UnauthorizedException("Token validation failed", ex);
 		}
 	}
 
-	public JsonClientCaller(URL url, String user, String password) throws UnauthorizedException, IOException {
+	public JsonClientCaller(URL url, String user, String password, URL... authServiceUrl) throws UnauthorizedException, IOException {
 		this(url);
 		this.user = user;
 		this.password = password.toCharArray();
-		accessToken = requestTokenFromKBase(user, this.password);
+		accessToken = requestTokenFromKBase(user, this.password, authServiceUrl);
 	}
 	
 	/** Determine whether this client allows insecure http connections
@@ -98,7 +116,7 @@ public class JsonClientCaller {
 
 	/** Deprecated - use isInsecureHttpConnectionAllowed().
 	 * @deprecated
-	 * @return
+	 * @return true if insecure connections are allowed.
 	 */
 	public boolean isAuthAllowedForHttp() {
 		return allowInsecureHttp;
@@ -207,28 +225,41 @@ public class JsonClientCaller {
 		return conn;
 	}
 	
-	public static AuthToken requestTokenFromKBase(String user, char[] password)
-			throws UnauthorizedException, IOException {
+	public static AuthToken requestTokenFromKBase(String user, char[] password, 
+	        URL... authServiceUrl) throws UnauthorizedException, IOException {
 		try {
-			return AuthService.login(user, new String(password)).getToken();
+	         if (authServiceUrl == null || authServiceUrl.length < 1 || authServiceUrl[0] == null) {
+	             return AuthService.login(user, new String(password)).getToken();
+	         } else {
+	             if (authServiceUrl.length > 1)
+	                 throw new UnauthorizedException("There is more than one auth service url argument passed");
+	             try {
+	                 return new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
+	                         authServiceUrl[0])).login(user, new String(password)).getToken();
+	             } catch (URISyntaxException use) {
+	                 throw new UnauthorizedException(
+	                         "Could not contact AuthService url (" + authServiceUrl + 
+	                         ") to get user token: " + use.getMessage(), use);
+	             }
+	         }
 		} catch (AuthException ex) {
 			throw new UnauthorizedException("Could not authenticate user", ex);
 		}
 	}
 		
-	public <ARG, RET> RET jsonrpcCall(String method, ARG arg,
-			TypeReference<RET> cls, boolean ret, boolean authRequired)
+	public <ARG, RET> RET jsonrpcCall(String method, ARG arg, TypeReference<RET> cls, 
+	        boolean ret, boolean authRequired, RpcContext... context)
 			throws IOException, JsonClientException {
 		HttpURLConnection conn = setupCall(authRequired);
 		String id = ("" + Math.random()).replace(".", "");
 		if (streamRequest) {
 			// Calculate content-length before
-			final long size = calculateResponseLength(method, arg, id);
+			final long size = calculateResponseLength(method, arg, id, context);
 			// Set content-length
 			conn.setFixedLengthStreamingMode(size);
 		}
 		// Write real data into http output stream
-		writeRequestData(method, arg, conn.getOutputStream(), id);
+		writeRequestData(method, arg, conn.getOutputStream(), id, context);
 		// Read response
 		int code = conn.getResponseCode();
 		conn.getResponseMessage();
@@ -332,7 +363,7 @@ public class JsonClientCaller {
 	}
 
 	private <ARG> long calculateResponseLength(String method, ARG arg,
-			String id) throws IOException {
+			String id, RpcContext... context) throws IOException {
 		final long[] sizeWrapper = new long[] {0};
 		OutputStream os = new OutputStream() {
 			@Override
@@ -342,7 +373,7 @@ public class JsonClientCaller {
 			@Override
 			public void write(byte[] b, int o, int l) {sizeWrapper[0] += l;}
 		};
-		writeRequestData(method, arg, os, id);
+		writeRequestData(method, arg, os, id, context);
 		return sizeWrapper[0];
 	}
 
@@ -362,7 +393,7 @@ public class JsonClientCaller {
 			throw new JsonClientException("Expected " + expected + " token but " + actual + " was occured");
 	}
 		
-	public void writeRequestData(String method, Object arg, OutputStream os, String id) 
+	public void writeRequestData(String method, Object arg, OutputStream os, String id, RpcContext... context) 
 			throws IOException {
 		JsonGenerator g = mapper.getFactory().createGenerator(os, JsonEncoding.UTF8);
 		g.writeStartObject();
@@ -370,6 +401,8 @@ public class JsonClientCaller {
 		g.writeStringField("method", method);
 		g.writeStringField("version", "1.1");
 		g.writeStringField("id", id);
+		if (context != null && context.length == 1)
+	        g.writeObjectField("context", context[0]);		    
 		g.writeEndObject();
 		g.close();
 		os.flush();

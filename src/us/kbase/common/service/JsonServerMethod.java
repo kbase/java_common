@@ -16,4 +16,6 @@ public @interface JsonServerMethod {
 	String rpc();
 	boolean tuple() default false;
 	boolean authOptional() default false;
+	boolean async() default true;
+	boolean sync() default true;
 }
