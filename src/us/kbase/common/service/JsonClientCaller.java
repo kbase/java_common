@@ -47,6 +47,7 @@ public class JsonClientCaller {
 	private boolean streamRequest = false;
 	private Integer connectionReadTimeOut = 30 * 60 * 1000;
 	private File fileForNextRpcResponse = null;
+	private final URL authServiceUrl;
 	
 	private static TrustManager[] GULLIBLE_TRUST_MGR = new TrustManager[] {
 		new X509TrustManager() {
@@ -67,25 +68,31 @@ public class JsonClientCaller {
 			}
 	};
 	
-	
-	public JsonClientCaller(URL url) {
+    public JsonClientCaller(URL url) {
+        this(url, (URL)null);
+    }
+    
+	public JsonClientCaller(URL url, URL authServiceUrl) {
 		serviceUrl = url;
 		mapper = new ObjectMapper().registerModule(new JacksonTupleModule());
+		this.authServiceUrl = authServiceUrl;
 	}
 
-	public JsonClientCaller(URL url, AuthToken accessToken, URL... authServiceUrl) throws UnauthorizedException, IOException {
-		this(url);
+	public JsonClientCaller(URL url, AuthToken accessToken) throws UnauthorizedException, IOException {
+	    this(url, accessToken, null);
+	}
+	
+	public JsonClientCaller(URL url, AuthToken accessToken, URL authServiceUrl) throws UnauthorizedException, IOException {
+		this(url, authServiceUrl);
 		this.accessToken = accessToken;
 		try {
 		    boolean validToken;
-		    if (authServiceUrl == null || authServiceUrl.length < 1 || authServiceUrl[0] == null) {
+		    if (authServiceUrl == null) {
 		        validToken = AuthService.validateToken(accessToken);
 		    } else {
-		        if (authServiceUrl.length > 1)
-		            throw new UnauthorizedException("There is more than one auth service url argument passed");
 		        try {
 		            validToken = new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
-		                    authServiceUrl[0])).validateToken(accessToken);
+		                    authServiceUrl)).validateToken(accessToken);
 		        } catch (URISyntaxException use) {
 		            throw new UnauthorizedException(
 		                    "Could not contact AuthService url (" + authServiceUrl + 
@@ -99,8 +106,12 @@ public class JsonClientCaller {
 		}
 	}
 
-	public JsonClientCaller(URL url, String user, String password, URL... authServiceUrl) throws UnauthorizedException, IOException {
-		this(url);
+	public JsonClientCaller(URL url, String user, String password) throws UnauthorizedException, IOException {
+	    this(url, user, password, null);
+	}
+	
+	public JsonClientCaller(URL url, String user, String password, URL authServiceUrl) throws UnauthorizedException, IOException {
+		this(url, authServiceUrl);
 		this.user = user;
 		this.password = password.toCharArray();
 		accessToken = requestTokenFromKBase(user, this.password, authServiceUrl);
@@ -200,7 +211,7 @@ public class JsonClientCaller {
 								"because user wasn't set");
 					}
 				}
-				accessToken = requestTokenFromKBase(user, password);
+				accessToken = requestTokenFromKBase(user, password, authServiceUrl);
 			}
 			conn.setRequestProperty("Authorization", accessToken.toString());
 		}
@@ -224,18 +235,21 @@ public class JsonClientCaller {
 		}
 		return conn;
 	}
-	
+
+	public static AuthToken requestTokenFromKBase(String user, char[] password) 
+	        throws UnauthorizedException, IOException {
+	    return requestTokenFromKBase(user, password, null);
+	}
+
 	public static AuthToken requestTokenFromKBase(String user, char[] password, 
-	        URL... authServiceUrl) throws UnauthorizedException, IOException {
+	        URL authServiceUrl) throws UnauthorizedException, IOException {
 		try {
-	         if (authServiceUrl == null || authServiceUrl.length < 1 || authServiceUrl[0] == null) {
+	         if (authServiceUrl == null) {
 	             return AuthService.login(user, new String(password)).getToken();
 	         } else {
-	             if (authServiceUrl.length > 1)
-	                 throw new UnauthorizedException("There is more than one auth service url argument passed");
 	             try {
 	                 return new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
-	                         authServiceUrl[0])).login(user, new String(password)).getToken();
+	                         authServiceUrl)).login(user, new String(password)).getToken();
 	             } catch (URISyntaxException use) {
 	                 throw new UnauthorizedException(
 	                         "Could not contact AuthService url (" + authServiceUrl + 
@@ -246,9 +260,22 @@ public class JsonClientCaller {
 			throw new UnauthorizedException("Could not authenticate user", ex);
 		}
 	}
-		
+
+    public <ARG, RET> RET jsonrpcCall(String method, ARG arg, TypeReference<RET> cls, 
+            boolean ret, boolean authRequired)
+            throws IOException, JsonClientException {
+        return jsonrpcCall(method, arg, cls, ret, authRequired, (RpcContext)null);
+    }
+
+    public <ARG, RET> RET jsonrpcCall(String method, ARG arg, TypeReference<RET> cls, 
+            boolean ret, boolean authRequired, RpcContext[] context)
+            throws IOException, JsonClientException {
+        return jsonrpcCall(method, arg, cls, ret, authRequired, 
+                context != null && context.length == 1 ? context[0] : null);
+    }
+    
 	public <ARG, RET> RET jsonrpcCall(String method, ARG arg, TypeReference<RET> cls, 
-	        boolean ret, boolean authRequired, RpcContext... context)
+	        boolean ret, boolean authRequired, RpcContext context)
 			throws IOException, JsonClientException {
 		HttpURLConnection conn = setupCall(authRequired);
 		String id = ("" + Math.random()).replace(".", "");
@@ -363,7 +390,7 @@ public class JsonClientCaller {
 	}
 
 	private <ARG> long calculateResponseLength(String method, ARG arg,
-			String id, RpcContext... context) throws IOException {
+			String id, RpcContext context) throws IOException {
 		final long[] sizeWrapper = new long[] {0};
 		OutputStream os = new OutputStream() {
 			@Override
@@ -393,7 +420,7 @@ public class JsonClientCaller {
 			throw new JsonClientException("Expected " + expected + " token but " + actual + " was occured");
 	}
 		
-	public void writeRequestData(String method, Object arg, OutputStream os, String id, RpcContext... context) 
+	public void writeRequestData(String method, Object arg, OutputStream os, String id, RpcContext context) 
 			throws IOException {
 		JsonGenerator g = mapper.getFactory().createGenerator(os, JsonEncoding.UTF8);
 		g.writeStartObject();
@@ -401,8 +428,8 @@ public class JsonClientCaller {
 		g.writeStringField("method", method);
 		g.writeStringField("version", "1.1");
 		g.writeStringField("id", id);
-		if (context != null && context.length == 1)
-	        g.writeObjectField("context", context[0]);		    
+		if (context != null)
+	        g.writeObjectField("context", context);		    
 		g.writeEndObject();
 		g.close();
 		os.flush();

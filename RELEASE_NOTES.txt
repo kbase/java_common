@@ -4,14 +4,15 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
-VERSION: 0.0.10 (Released 4/10/2015)
+VERSION: 0.0.12 (Released 10/26/2015)
 --------------------------------------
 
 NEW FEATURES:
 - N/A
 
 UPDATED FEATURES / MAJOR BUG FIXES:
-- Add method to close all mongo connections to GetMongoDB class.
+- Bug was fixed in Java Client Caller related to recent backward-incompatible changes 
+  in signatures of public methods used by old java generated JSON RPC clients.
 
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
@@ -24,6 +25,18 @@ NEW FEATURES:
 
 UPDATED FEATURES / MAJOR BUG FIXES:
 - Java Server Servlet was redesigned in order to support async server calls
+
+ANTICIPATED FUTURE DEVELOPMENTS:
+- None
+
+VERSION: 0.0.10 (Released 4/10/2015)
+--------------------------------------
+
+NEW FEATURES:
+- N/A
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- Add method to close all mongo connections to GetMongoDB class.
 
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
