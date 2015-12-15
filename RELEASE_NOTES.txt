@@ -4,6 +4,20 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+
+VERSION: 0.0.13 (Released 12/14/2015)
+--------------------------------------
+
+NEW FEATURES:
+- Support for auto-generated provenance was added in JsonServerServlet.
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- None
+
+ANTICIPATED FUTURE DEVELOPMENTS:
+- None
+
+
 VERSION: 0.0.12 (Released 10/26/2015)
 --------------------------------------
 
@@ -17,6 +31,7 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
 
+
 VERSION: 0.0.11 (Released 10/21/2015)
 --------------------------------------
 
@@ -29,6 +44,7 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
 
+
 VERSION: 0.0.10 (Released 4/10/2015)
 --------------------------------------
 
@@ -40,6 +56,7 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
+
 
 VERSION: 0.0.9 (Released 3/27/2015)
 --------------------------------------
@@ -56,6 +73,7 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
 
+
 VERSION: 0.0.8 (Released 11/10/2014)
 --------------------------------------
 
@@ -67,6 +85,7 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
+
 
 VERSION: 0.0.7 (Released 10/20/2014)
 --------------------------------------
@@ -81,6 +100,7 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
 
+
 VERSION: 0.0.6 (Released 8/31/2014)
 --------------------------------------
 
@@ -93,6 +113,7 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
+
 
 VERSION: 0.0.5 (Released 8/13/2014)
 --------------------------------------
@@ -107,6 +128,7 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
 
+
 VERSION: 0.0.4 (Released 7/18/2014)
 --------------------------------------
 
@@ -118,6 +140,7 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
+
 
 VERSION: 0.0.3 (Released 7/7/2014)
 --------------------------------------

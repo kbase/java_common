@@ -428,11 +428,29 @@ public class JsonServerServlet extends HttpServlet {
 	                return;			        
 			    }
 			    int rpcArgCount = rpcMethod.getGenericParameterTypes().length;
-			    Object[] methodValues = new Object[rpcArgCount];			
-                if (rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].isArray() && 
-                        rpcMethod.getParameterTypes()[rpcArgCount - 1].getComponentType().equals(RpcContext.class)) {
+			    Object[] methodValues = new Object[rpcArgCount];
+                boolean lastParamRpcContext = rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].equals(RpcContext.class);
+			    boolean lastParamRpcContextArr = rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].isArray() && 
+                        rpcMethod.getParameterTypes()[rpcArgCount - 1].getComponentType().equals(RpcContext.class);
+			    if (lastParamRpcContext || lastParamRpcContextArr) {
+                    if (prepareProvenanceAutomatically()) {
+                        try {
+                            Class<?> paType = Class.forName("us.kbase.workspace.ProvenanceAction");
+                            Object pa = paType.newInstance();
+                            paType.getMethod("setService", String.class).invoke(pa, info.getModule());
+                            paType.getMethod("setMethod", String.class).invoke(pa, info.getMethod());
+                            paType.getMethod("setMethodParams", List.class).invoke(pa, paramsList);
+                            List<Object> provenance = new ArrayList<Object>();
+                            provenance.add(pa);
+                            context.setProvenance(provenance);
+                        } catch (ClassNotFoundException ignore) {}
+                    }
                     rpcArgCount--;
-                    methodValues[rpcArgCount] = new RpcContext[] {context};
+                    if (lastParamRpcContext) {
+                        methodValues[rpcArgCount] = context;                        
+                    } else {
+                        methodValues[rpcArgCount] = new RpcContext[] {context};
+                    }
                 }
 			    if (rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].equals(AuthToken.class)) {
 			        if (token != null || !rpcMethod.getAnnotation(JsonServerMethod.class).authOptional()) {
@@ -769,6 +787,10 @@ public class JsonServerServlet extends HttpServlet {
 	public void setServiceVersion(String serviceVersion) {
         this.serviceVersion = serviceVersion;
     }
+	
+	protected boolean prepareProvenanceAutomatically() {
+	    return true;
+	}
 	
 	public static class RpcCallData {
 		private Object id;

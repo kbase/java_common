@@ -31,6 +31,8 @@ public class RpcContext {
     private List<MethodCall> callStack;
     @JsonProperty("run_id")
     private String runId;
+    @JsonProperty("provenance")
+    private Object provenance;
     private Map<String, Object> additionalProperties = new HashMap<String, Object>();
 
     @JsonProperty("call_stack")
@@ -63,6 +65,21 @@ public class RpcContext {
         return this;
     }
 
+    @JsonProperty("provenance")
+    public Object getProvenance() {
+        return provenance;
+    }
+
+    @JsonProperty("provenance")
+    public void setProvenance(Object provenance) {
+        this.provenance = provenance;
+    }
+
+    public RpcContext withProvenance(Object provenance) {
+        this.provenance = provenance;
+        return this;
+    }
+
     @JsonAnyGetter
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
@@ -75,7 +92,7 @@ public class RpcContext {
 
     @Override
     public String toString() {
-        return ((((((("RpcContext"+" [callStack=")+ callStack)+", runId=")+ runId)+", additionalProperties=")+ additionalProperties)+"]");
+        return ((((((((("RpcContext"+" [callStack=")+ callStack)+", runId=")+ runId)+", provenance=")+ provenance)+", additionalProperties=")+ additionalProperties)+"]");
     }
 
 }
