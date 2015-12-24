@@ -206,7 +206,7 @@ public class JsonServerServlet extends HttpServlet {
 			config = new HashMap<String, String>();
 			logger.log(LOG_LEVEL_ERR, JsonServerServlet.class.getName(),
 					"The configuration file " + deploy + " has no section " +
-			serviceName);
+					serviceName);
 		}
 		return config;
 	}
