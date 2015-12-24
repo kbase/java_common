@@ -53,6 +53,7 @@ public class JsonServerSyslog {
 		this(serviceName, configFileParam, -1);
 	}
 	
+	//TODO the interface here would more general if it just took a file and a log level, make the client class figure out the file path
 	public JsonServerSyslog(String serviceName, String configFileParam, int defultLogLevel) {
 		this.serviceName = serviceName;
 		logLevel = defultLogLevel;

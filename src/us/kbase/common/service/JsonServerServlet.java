@@ -72,10 +72,14 @@ public class JsonServerServlet extends HttpServlet {
 	private JsonServerSyslog userLogger;
 	
 	/** The key for the environment variable or JVM variable with the value of
-	 * server config file location.
+	 * the server config file location.
 	 */
 	public static final String KB_DEP = "KB_DEPLOYMENT_CONFIG";
-	final private static String KB_SERVNAME = "KB_SERVICE_NAME";
+	
+	/** The key for the environment variable or JVM variable with the value of
+	 * the server name.
+	 */
+	public static final String KB_SERVNAME = "KB_SERVICE_NAME";
 	private static final String CONFIG_AUTH_SERVICE_URL_PARAM = "auth-service-url";
 	private static final String KB_JOB_SERVICE_URL = "KB_JOB_SERVICE_URL";
 	private static final String CONFIG_JOB_SERVICE_URL_PARAM = "job-service-url";
@@ -178,10 +182,12 @@ public class JsonServerServlet extends HttpServlet {
 	public static Map<String, String> getConfig(
 			final String defaultServiceName,
 			final JsonServerSyslog logger) {
+		if (logger == null) {
+			throw new NullPointerException("logger cannot be null");
+		}
 		final String serviceName = getServiceName(defaultServiceName);
 		final String file = System.getProperty(KB_DEP) == null ?
 				System.getenv(KB_DEP) : System.getProperty(KB_DEP);
-		//read the config file
 		if (file == null) {
 			return new HashMap<String, String>();
 		}
@@ -206,6 +212,9 @@ public class JsonServerServlet extends HttpServlet {
 	}
 
 	private static String getServiceName(final String defaultServiceName) {
+		if (defaultServiceName == null) {
+			throw new NullPointerException("service name cannot be null");
+		}
 		String serviceName = System.getProperty(KB_SERVNAME) == null ?
 				System.getenv(KB_SERVNAME) : System.getProperty(KB_SERVNAME);
 		if (serviceName == null) {
@@ -290,8 +299,8 @@ public class JsonServerServlet extends HttpServlet {
 	 * * Sets HTTP_ACCESS_CONTROL_REQUEST_HEADERS to the contents of the
 	 * request Access-Control-Allow-Headers, or a minimum of "authorization"
 	 * * Sets the content type to application/json
-	 * @param request
-	 * @param response
+	 * @param request the HTTP request
+	 * @param response the HTTP response
 	 */
 	public static void setupResponseHeaders(HttpServletRequest request, HttpServletResponse response) {
 		response.setHeader("Access-Control-Allow-Origin", "*");
