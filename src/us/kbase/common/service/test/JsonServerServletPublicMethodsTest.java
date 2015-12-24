@@ -66,7 +66,7 @@ public class JsonServerServletPublicMethodsTest {
 	
 	@Test
 	public void getConfig() throws Exception {
-		
+		//TODO TEST getConfig()
 	}
 	
 	@Test

@@ -15,8 +15,6 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 public class HttpServletRequestMock implements HttpServletRequest {
 
 	private Map<String, String> headers = new HashMap<String, String>();
@@ -32,96 +30,96 @@ public class HttpServletRequestMock implements HttpServletRequest {
 	
 	@Override
 	public Object getAttribute(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@SuppressWarnings("rawtypes")
 	@Override
 	public Enumeration getAttributeNames() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getCharacterEncoding() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public int getContentLength() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getContentType() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public ServletInputStream getInputStream() throws IOException {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getLocalAddr() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getLocalName() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public int getLocalPort() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public Locale getLocale() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@SuppressWarnings("rawtypes")
 	@Override
 	public Enumeration getLocales() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getParameter(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@SuppressWarnings("rawtypes")
 	@Override
 	public Map getParameterMap() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@SuppressWarnings("rawtypes")
 	@Override
 	public Enumeration getParameterNames() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String[] getParameterValues(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getProtocol() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public BufferedReader getReader() throws IOException {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getRealPath(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
@@ -131,64 +129,64 @@ public class HttpServletRequestMock implements HttpServletRequest {
 
 	@Override
 	public String getRemoteHost() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public int getRemotePort() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public RequestDispatcher getRequestDispatcher(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getScheme() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getServerName() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public int getServerPort() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean isSecure() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void removeAttribute(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 		
 	}
 
 	@Override
 	public void setAttribute(String arg0, Object arg1) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void setCharacterEncoding(String arg0)
 			throws UnsupportedEncodingException {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getAuthType() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getContextPath() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
@@ -198,7 +196,7 @@ public class HttpServletRequestMock implements HttpServletRequest {
 
 	@Override
 	public long getDateHeader(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
@@ -209,102 +207,102 @@ public class HttpServletRequestMock implements HttpServletRequest {
 	@SuppressWarnings("rawtypes")
 	@Override
 	public Enumeration getHeaderNames() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@SuppressWarnings("rawtypes")
 	@Override
 	public Enumeration getHeaders(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public int getIntHeader(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getMethod() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getPathInfo() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getPathTranslated() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getQueryString() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getRemoteUser() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getRequestURI() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public StringBuffer getRequestURL() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getRequestedSessionId() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getServletPath() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public HttpSession getSession() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public HttpSession getSession(boolean arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public Principal getUserPrincipal() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean isRequestedSessionIdFromCookie() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean isRequestedSessionIdFromURL() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean isRequestedSessionIdFromUrl() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean isRequestedSessionIdValid() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean isUserInRole(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 }

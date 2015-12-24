@@ -10,8 +10,6 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 public class HttpServletResponseMock implements HttpServletResponse {
 
 	private Map<String, String> headers = new HashMap<String, String>();
@@ -23,17 +21,17 @@ public class HttpServletResponseMock implements HttpServletResponse {
 	
 	@Override
 	public void flushBuffer() throws IOException {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public int getBufferSize() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String getCharacterEncoding() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
@@ -43,47 +41,47 @@ public class HttpServletResponseMock implements HttpServletResponse {
 
 	@Override
 	public Locale getLocale() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public ServletOutputStream getOutputStream() throws IOException {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public PrintWriter getWriter() throws IOException {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean isCommitted() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void reset() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void resetBuffer() {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void setBufferSize(int arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void setCharacterEncoding(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void setContentLength(int arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
@@ -93,17 +91,17 @@ public class HttpServletResponseMock implements HttpServletResponse {
 
 	@Override
 	public void setLocale(Locale arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void addCookie(Cookie arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void addDateHeader(String arg0, long arg1) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
@@ -113,52 +111,52 @@ public class HttpServletResponseMock implements HttpServletResponse {
 
 	@Override
 	public void addIntHeader(String arg0, int arg1) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public boolean containsHeader(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String encodeRedirectURL(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String encodeRedirectUrl(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String encodeURL(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public String encodeUrl(String arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void sendError(int arg0) throws IOException {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void sendError(int arg0, String arg1) throws IOException {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void sendRedirect(String arg0) throws IOException {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void setDateHeader(String arg0, long arg1) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
@@ -168,17 +166,17 @@ public class HttpServletResponseMock implements HttpServletResponse {
 
 	@Override
 	public void setIntHeader(String arg0, int arg1) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void setStatus(int arg0) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public void setStatus(int arg0, String arg1) {
-		throw new NotImplementedException();
+		throw new UnsupportedOperationException();
 	}
 
 }
