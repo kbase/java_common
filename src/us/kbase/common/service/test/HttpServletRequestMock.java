@@ -20,6 +20,11 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 public class HttpServletRequestMock implements HttpServletRequest {
 
 	private Map<String, String> headers = new HashMap<String, String>();
+	private String ipAddress = null;
+	
+	public void setIpAddress(String ip) {
+		ipAddress = ip;
+	}
 	
 	public void setHeader(String key, String value) {
 		headers.put(key, value);
@@ -121,7 +126,7 @@ public class HttpServletRequestMock implements HttpServletRequest {
 
 	@Override
 	public String getRemoteAddr() {
-		throw new NotImplementedException();
+		return ipAddress;
 	}
 
 	@Override
