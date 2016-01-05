@@ -16,6 +16,7 @@ public class AwePlaying {
 		testTaskHolder();
 	}
 	
+	@SuppressWarnings("unused")
 	private static void testClient() throws Exception {
 		AweClient client = new AweClient(AweClient.DEFAULT_DEV_SERVER_URL);
 		AwfTemplate job = AweClient.createSimpleJobTemplate("protcmp_pipeline", "protcmp", "1 2 3 4 5 6 8", "java_generic_script");

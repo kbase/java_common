@@ -56,6 +56,8 @@ public class JsonServerServlet extends HttpServlet {
 	private static final String APP_JSON = "application/json";
 	private static final String DONT_TRUST_X_IP_HEADERS =
 			"dont_trust_x_ip_headers";
+	private static final String DONT_TRUST_X_IP_HEADERS2 =
+			"dont-trust-x-ip-headers";
 	private static final String STRING_TRUE = "true";
 	private static final String X_FORWARDED_FOR = "X-Forwarded-For";
 	private static final String X_REAL_IP = "X-Real-IP";
@@ -68,10 +70,18 @@ public class JsonServerServlet extends HttpServlet {
 	public static final int LOG_LEVEL_DEBUG3 = JsonServerSyslog.LOG_LEVEL_DEBUG + 2;
 	private JsonServerSyslog sysLogger;
 	private JsonServerSyslog userLogger;
-	final private static String KB_DEP = "KB_DEPLOYMENT_CONFIG";
-	final private static String KB_SERVNAME = "KB_SERVICE_NAME";
-    private static final String CONFIG_AUTH_SERVICE_URL_PARAM = "auth-service-url";
-    private static final String KB_JOB_SERVICE_URL = "KB_JOB_SERVICE_URL";
+	
+	/** The key for the environment variable or JVM variable with the value of
+	 * the server config file location.
+	 */
+	public static final String KB_DEP = "KB_DEPLOYMENT_CONFIG";
+	
+	/** The key for the environment variable or JVM variable with the value of
+	 * the server name.
+	 */
+	public static final String KB_SERVNAME = "KB_SERVICE_NAME";
+	private static final String CONFIG_AUTH_SERVICE_URL_PARAM = "auth-service-url";
+	private static final String KB_JOB_SERVICE_URL = "KB_JOB_SERVICE_URL";
 	private static final String CONFIG_JOB_SERVICE_URL_PARAM = "job-service-url";
 	protected Map<String, String> config = new HashMap<String, String>();
 	private Server jettyServer = null;
@@ -129,12 +139,16 @@ public class JsonServerServlet extends HttpServlet {
 		
 	}
 	
+	/** Sets the server to failed mode. All API calls will return an error. */
 	public void startupFailed() {
 		this.startupFailed = true;
 	}
 	
+	/** Create a new Servlet.
+	 * @param specServiceName the name of this server.
+	 */
 	public JsonServerServlet(String specServiceName) {
-	    this.specServiceName = specServiceName;
+		this.specServiceName = specServiceName;
 		this.mapper = new ObjectMapper().registerModule(new JacksonTupleModule());
 		this.rpcCache = new HashMap<String, Method>();
 		for (Method m : getClass().getMethods()) {
@@ -142,42 +156,74 @@ public class JsonServerServlet extends HttpServlet {
 				JsonServerMethod ann = m.getAnnotation(JsonServerMethod.class);
 				rpcCache.put(ann.rpc(), m);
 				if (ann.async()) {
-	                rpcCache.put(ann.rpc() + "_async", m);
-                    rpcCache.put(ann.rpc() + "_check", m);
+					rpcCache.put(ann.rpc() + "_async", m);
+					rpcCache.put(ann.rpc() + "_check", m);
 				}
 			}
 		}
 		
-		String serviceName = System.getProperty(KB_SERVNAME) == null ?
-				System.getenv(KB_SERVNAME) : System.getProperty(KB_SERVNAME);
-		if (serviceName == null) {
-			serviceName = specServiceName;
-			if (serviceName.contains(":"))
-				serviceName = serviceName.substring(0, serviceName.indexOf(':')).trim();
-		}
-		String file = System.getProperty(KB_DEP) == null ?
-				System.getenv(KB_DEP) : System.getProperty(KB_DEP);
-		sysLogger = new JsonServerSyslog(serviceName, KB_DEP, LOG_LEVEL_INFO);
+		sysLogger = new JsonServerSyslog(getServiceName(specServiceName),
+				KB_DEP, LOG_LEVEL_INFO);
 		userLogger = new JsonServerSyslog(sysLogger);
-		//read the config file
-		if (file == null) {
-			return;
+		config = getConfig(specServiceName, sysLogger);
+	}
+	
+	/**
+	 * Returns the configuration from the KBase deploy.cfg config file.
+	 * Returns an empty map if no config file is specified, if the file
+	 * can't be read, or if there is no section of the config file matching
+	 * serviceName.
+	 * @param defaultServiceName the default name of the service to use if it
+	 * can't be found in the environment, and the section of the config file
+	 * where the service's configuration exists
+	 * @param logger a logger for logging errors
+	 * @return the server config from the deploy.cfg file
+	 */
+	public static Map<String, String> getConfig(
+			final String defaultServiceName,
+			final JsonServerSyslog logger) {
+		if (logger == null) {
+			throw new NullPointerException("logger cannot be null");
 		}
-		File deploy = new File(file);
-		Ini ini = null;
+		final String serviceName = getServiceName(defaultServiceName);
+		final String file = System.getProperty(KB_DEP) == null ?
+				System.getenv(KB_DEP) : System.getProperty(KB_DEP);
+		if (file == null) {
+			return new HashMap<String, String>();
+		}
+		final File deploy = new File(file);
+		final Ini ini;
 		try {
 			ini = new Ini(deploy);
 		} catch (IOException ioe) {
-			sysLogger.log(LOG_LEVEL_ERR, getClass().getName(), "There was an IO Error reading the deploy file "
+			logger.log(LOG_LEVEL_ERR, JsonServerServlet.class.getName(),
+					"There was an IO Error reading the deploy file "
 							+ deploy + ". Traceback:\n" + ioe);
-			return;
+			return new HashMap<String, String>();
 		}
-		config = ini.get(serviceName);
+		Map<String, String> config = ini.get(serviceName);
 		if (config == null) {
 			config = new HashMap<String, String>();
-			sysLogger.log(LOG_LEVEL_ERR, getClass().getName(), "The configuration file " + deploy + 
-							" has no section " + serviceName);
+			logger.log(LOG_LEVEL_ERR, JsonServerServlet.class.getName(),
+					"The configuration file " + deploy + " has no section " +
+					serviceName);
 		}
+		return config;
+	}
+
+	private static String getServiceName(final String defaultServiceName) {
+		if (defaultServiceName == null) {
+			throw new NullPointerException("service name cannot be null");
+		}
+		String serviceName = System.getProperty(KB_SERVNAME) == null ?
+				System.getenv(KB_SERVNAME) : System.getProperty(KB_SERVNAME);
+		if (serviceName == null) {
+			serviceName = defaultServiceName;
+			if (serviceName.contains(":"))
+				serviceName = serviceName.substring(
+						0, serviceName.indexOf(':')).trim();
+		}
+		return serviceName;
 	}
 
 	/**
@@ -237,9 +283,9 @@ public class JsonServerServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		JsonServerSyslog.RpcInfo info = JsonServerSyslog.getCurrentRpcInfo().reset();
-		info.setIp(request.getRemoteAddr());
+		info.setIp(getIpAddress(request, config));
 		response.setContentType(APP_JSON);
-		OutputStream output	= response.getOutputStream();
+		OutputStream output = response.getOutputStream();
 		JsonServerSyslog.getCurrentRpcInfo().reset();
 		if (startupFailed) {
 			writeError(wrap(response), -32603, "The server did not start up properly. Please check the log files for the cause.", output);
@@ -248,7 +294,15 @@ public class JsonServerServlet extends HttpServlet {
 		writeError(wrap(response), -32300, "HTTP GET not allowed.", output);
 	}
 
-	private void setupResponseHeaders(HttpServletRequest request, HttpServletResponse response) {
+	/** Set up server response headers.
+	 * * Sets Access-Control-Allow-Origin: *
+	 * * Sets HTTP_ACCESS_CONTROL_REQUEST_HEADERS to the contents of the
+	 * request Access-Control-Allow-Headers, or a minimum of "authorization"
+	 * * Sets the content type to application/json
+	 * @param request the HTTP request
+	 * @param response the HTTP response
+	 */
+	public static void setupResponseHeaders(HttpServletRequest request, HttpServletResponse response) {
 		response.setHeader("Access-Control-Allow-Origin", "*");
 		String allowedHeaders = request.getHeader("HTTP_ACCESS_CONTROL_REQUEST_HEADERS");
 		response.setHeader("Access-Control-Allow-Headers", allowedHeaders == null ? "authorization" : allowedHeaders);
@@ -258,15 +312,15 @@ public class JsonServerServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, final HttpServletResponse response) throws ServletException, IOException {
 		checkMemoryForRpc();
-		String remoteIp = getIpAddress(request);
-        setupResponseHeaders(request, response);
-        OutputStream output = response.getOutputStream();
-        ResponseStatusSetter respStatus = new ResponseStatusSetter() {
-            @Override
-            public void setStatus(int status) {
-                response.setStatus(status);
-            }
-        };
+		String remoteIp = getIpAddress(request, config);
+		setupResponseHeaders(request, response);
+		OutputStream output = response.getOutputStream();
+		ResponseStatusSetter respStatus = new ResponseStatusSetter() {
+			@Override
+			public void setStatus(int status) {
+				response.setStatus(status);
+			}
+		};
 		JsonServerSyslog.RpcInfo info = JsonServerSyslog.getCurrentRpcInfo().reset();
 		info.setIp(remoteIp);
 		JsonTokenStream jts = null; 
@@ -594,11 +648,24 @@ public class JsonServerServlet extends HttpServlet {
 		}
 	}
 
-	private String getIpAddress(HttpServletRequest request) {
+	/** Get the IP address of the client. In order of precedence:
+	 * 1. The first address in X-Forwarded-For
+	 * 2. X-Real-IP
+	 * 3. The remote address.
+	 * If dont_trust_x_ip_headers or dont-trust-x-ip-headers is set to "true"
+	 * in the configuration, the remote address is returned.
+	 * @param request the HTTP request
+	 * @param config the server configuration as returned by getConfig().
+	 * @return the IP address of the client.
+	 */
+	public static String getIpAddress(
+			final HttpServletRequest request,
+			final Map<String, String> config) {
 		final String xFF = request.getHeader(X_FORWARDED_FOR);
 		final String realIP = request.getHeader(X_REAL_IP);
-		final boolean trustXHeaders = !STRING_TRUE.equals(
-				config.get(DONT_TRUST_X_IP_HEADERS));
+		final boolean trustXHeaders =
+				!STRING_TRUE.equals(config.get(DONT_TRUST_X_IP_HEADERS)) &&
+				!STRING_TRUE.equals(config.get(DONT_TRUST_X_IP_HEADERS2));
 		
 		if (trustXHeaders) {
 			if (xFF != null && !xFF.isEmpty()) {

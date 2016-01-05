@@ -53,6 +53,7 @@ public class JsonServerSyslog {
 		this(serviceName, configFileParam, -1);
 	}
 	
+	//TODO the interface here would more general if it just took a file and a log level, make the client class figure out the file path
 	public JsonServerSyslog(String serviceName, String configFileParam, int defultLogLevel) {
 		this.serviceName = serviceName;
 		logLevel = defultLogLevel;
@@ -183,7 +184,7 @@ public class JsonServerSyslog {
 		throw new IllegalStateException();
 	}
 
-	static RpcInfo getCurrentRpcInfo() {
+	public static RpcInfo getCurrentRpcInfo() {
 		RpcInfo ret = rpcInfo.get();
 		if (ret == null) {
 			ret = new RpcInfo();
@@ -368,43 +369,43 @@ public class JsonServerSyslog {
 			return this;
 		}
 		
-		String getId() {
+		public String getId() {
 			return id;
 		}
 		
-		void setId(String id) {
+		public void setId(String id) {
 			this.id = id;
 		}
 		
-		String getModule() {
+		public String getModule() {
 			return module;
 		}
 		
-		void setModule(String module) {
+		public void setModule(String module) {
 			this.module = module;
 		}
 		
-		String getMethod() {
+		public String getMethod() {
 			return method;
 		}
 		
-		void setMethod(String method) {
+		public void setMethod(String method) {
 			this.method = method;
 		}
 		
-		String getUser() {
+		public String getUser() {
 			return user;
 		}
 		
-		void setUser(String user) {
+		public void setUser(String user) {
 			this.user = user;
 		}
 		
-		String getIp() {
+		public String getIp() {
 			return ip;
 		}
 		
-		void setIp(String ip) {
+		public void setIp(String ip) {
 			this.ip = ip;
 		}
 	}

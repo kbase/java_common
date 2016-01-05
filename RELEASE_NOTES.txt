@@ -4,6 +4,20 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.0.14 (Released TBD)
+--------------------------------------
+
+NEW FEATURES:
+- None
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- Made public static methods in JsonServerServlet for getting the
+  server configuration, getting the IP address to log, and setting up
+  response headers.
+
+ANTICIPATED FUTURE DEVELOPMENTS:
+- None
+
 
 VERSION: 0.0.13 (Released 12/14/2015)
 --------------------------------------
