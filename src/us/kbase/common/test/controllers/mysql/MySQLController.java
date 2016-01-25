@@ -91,7 +91,7 @@ public class MySQLController {
 				.redirectOutput(tempDir.resolve("mysql.log").toFile());
 		
 		mysql = servpb.start();
-		Thread.sleep(3000); //wait for server to start up
+		Thread.sleep(5000); //wait for server to start up
 		
 		
 		Class.forName("com.mysql.jdbc.Driver");
