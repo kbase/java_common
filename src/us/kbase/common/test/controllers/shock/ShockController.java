@@ -10,19 +10,14 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
-
-import javax.xml.bind.DatatypeConverter;
+import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -58,23 +53,18 @@ public class ShockController {
 	}
 	
 	//TODO might need a proper version class that can do ranges etc
-	private final static Map<String, String> VERSION_MAP =
-			new HashMap<String, String>();
-	static {
-		VERSION_MAP.put("7ADD72D33FA63C7C031E3A5717006009", "0.8.23");
-		VERSION_MAP.put("7AA8762CF2A9E4E450CB025AE7AD968B", "0.9.6");
-		VERSION_MAP.put("45593bbd8ad0716fe931596ebc91fb75".toUpperCase(),
-				"0.9.12");
-	}
+	private final static Set<String> VERSION_SET =
+			new HashSet<String>(Arrays.asList("0.8.23", "0.9.6", "0.9.12"));
 	
 	private final Path tempDir;
 	
 	private final Process shock;
 	private final int port;
-	private final String version;
+	private final String knownVersion;
 
 	public ShockController(
 			final String shockExe,
+			final String shockVersion,
 			final Path rootTempDir,
 			final String adminUser,
 			final String mongohost,
@@ -85,8 +75,13 @@ public class ShockController {
 		tempDir = makeTempDirs(rootTempDir, "ShockController-", TEMP_DIRS);
 		port = findFreePort();
 		
+		if (!VERSION_SET.contains(shockVersion)) {
+			knownVersion = null;
+		} else {
+			knownVersion = shockVersion;
+		}
+		
 		checkExe(shockExe, "shock server");
-		version = getVersion(shockExe);
 		
 		Velocity.init();
 		VelocityContext context = new VelocityContext();
@@ -110,7 +105,7 @@ public class ShockController {
 			shockDB = GetMongoDB.getDB(mongohost, shockMongoDBname);
 		}
 		
-		setupWorkarounds(shockDB, adminUser, version);
+		setupWorkarounds(shockDB, adminUser, knownVersion);
 
 		ProcessBuilder servpb = new ProcessBuilder(shockExe, "--conf",
 				shockcfg.toString())
@@ -160,35 +155,12 @@ public class ShockController {
 		shockDB.getCollection("Versions").insert(Arrays.asList(n, acl, auth));
 	}
 
-	/** Returns the Shock version determined from the file MD5. Returns null
-	 * for versions that haven't been added to the version map in this class.
-	 * In this case startup workarounds cannot be applied and Shock may not
-	 * start.
+	/** Returns the Shock version supplied in the constructor *if* the version
+	 * has workarounds available. Otherwise returns null.
 	 * @return the Shock version.
 	 */
 	public String getVersion() {
-		return version;
-	}
-
-	private String getVersion(String shockExe) throws IOException {
-		final MessageDigest md;
-		try {
-			md = MessageDigest.getInstance("MD5");
-		} catch (NoSuchAlgorithmException nsae) {
-			throw new RuntimeException(
-					"apparently the MD5 algorithm doesn't exist. Who knew.",
-					nsae);
-		}
-		md.update(Files.readAllBytes(Paths.get(shockExe)));
-		final byte[] digest = md.digest();
-		final String digestInHex = DatatypeConverter.printHexBinary(digest)
-				.toUpperCase();
-		
-//		System.out.println(digestInHex);
-		if (!VERSION_MAP.containsKey(digestInHex)) {
-			return null;
-		}
-		return VERSION_MAP.get(digestInHex);
+		return knownVersion;
 	}
 
 	public int getServerPort() {
@@ -226,6 +198,7 @@ public class ShockController {
 	public static void main(String[] args) throws Exception {
 		ShockController ac = new ShockController(
 				"/kb/deployment/bin/shock-server",
+				"0.9.6",
 				Paths.get("workspacetemp"),
 				"kbasetest2",
 				"localhost",
