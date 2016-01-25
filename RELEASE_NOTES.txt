@@ -4,14 +4,27 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
-VERSION: 0.0.14 (Released TBD)
+VERSION: 0.0.15 (Released 1/24/2015)
 --------------------------------------
 
 NEW FEATURES:
 - None
 
 UPDATED FEATURES / MAJOR BUG FIXES:
+- Added workarounds to the ShockController for starting the server without
+  human intervention and adding an admin that works on the first startup
+
+ANTICIPATED FUTURE DEVELOPMENTS:
+- None
+
+VERSION: 0.0.14 (Released 1/4/2015)
+--------------------------------------
+
+NEW FEATURES:
+- None
+
 - Made public static methods in JsonServerServlet for getting the
+UPDATED FEATURES / MAJOR BUG FIXES:
   server configuration, getting the IP address to log, and setting up
   response headers.
 
