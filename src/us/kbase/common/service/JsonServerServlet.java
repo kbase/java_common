@@ -211,7 +211,11 @@ public class JsonServerServlet extends HttpServlet {
 		return config;
 	}
 
-	private static String getServiceName(final String defaultServiceName) {
+	protected String getDefaultServiceName() {
+	    return specServiceName;
+	}
+	
+	protected static String getServiceName(final String defaultServiceName) {
 		if (defaultServiceName == null) {
 			throw new NullPointerException("service name cannot be null");
 		}
@@ -496,6 +500,8 @@ public class JsonServerServlet extends HttpServlet {
                             paType.getMethod("setMethodParams", List.class).invoke(pa, paramsList);
                             List<Object> provenance = new ArrayList<Object>();
                             provenance.add(pa);
+                            if (context == null)
+                                context = new RpcContext();
                             context.setProvenance(provenance);
                         } catch (ClassNotFoundException ignore) {}
                     }
@@ -641,7 +647,7 @@ public class JsonServerServlet extends HttpServlet {
         }
 	}
 
-	private void logHeaders(final String xFF) {
+	protected void logHeaders(final String xFF) {
 		if (xFF != null && !xFF.isEmpty()) {
 			sysLogger.log(LOG_LEVEL_INFO, getClass().getName(),
 					X_FORWARDED_FOR + ": " + xFF);
@@ -711,7 +717,7 @@ public class JsonServerServlet extends HttpServlet {
 		this.maxRPCPackageSize = maxRPCPackageSize;
 	}
 	
-	private static AuthToken validateToken(String token, String authUrl)
+	protected static AuthToken validateToken(String token, String authUrl)
 			throws AuthException, IOException {
 		if (token == null)
 			throw new AuthException(
@@ -757,15 +763,15 @@ public class JsonServerServlet extends HttpServlet {
 	    }
 	}
 	
-	private void writeError(ResponseStatusSetter response, int code, String message, OutputStream output) {
+	protected void writeError(ResponseStatusSetter response, int code, String message, OutputStream output) {
 		writeError(response, code, message, null, output);
 	}
 	
-	private void writeError(ResponseStatusSetter response, int code, Throwable ex, OutputStream output) {
+	protected void writeError(ResponseStatusSetter response, int code, Throwable ex, OutputStream output) {
 		writeError(response, code, ex.getMessage(), ex, output);
 	}
 	
-	private void writeError(ResponseStatusSetter response, int code, String message, Throwable ex, OutputStream output) {
+	protected void writeError(ResponseStatusSetter response, int code, String message, Throwable ex, OutputStream output) {
 	    //new Exception(message, ex).printStackTrace();
 		String data = null;
 		if (ex != null) {
@@ -823,7 +829,7 @@ public class JsonServerServlet extends HttpServlet {
 		this.rpcDiskCacheTempDir = rpcDiskCacheTempDir;
 	}
 	
-	private ResponseStatusSetter wrap(final HttpServletResponse response) {
+	protected ResponseStatusSetter wrap(final HttpServletResponse response) {
 	    return new ResponseStatusSetter() {
             @Override
             public void setStatus(int status) {
@@ -832,7 +838,7 @@ public class JsonServerServlet extends HttpServlet {
         };
 	}
 	
-	private JsonClientCaller getJobServiceClient(AuthToken token) throws Exception {
+	protected JsonClientCaller getJobServiceClient(AuthToken token) throws Exception {
 	    String url = System.getProperty(KB_JOB_SERVICE_URL);
         if (url == null)
             url = System.getenv(KB_JOB_SERVICE_URL);
@@ -907,7 +913,7 @@ public class JsonServerServlet extends HttpServlet {
         }
 	}
 	
-	private static class PlainTypeRef extends TypeReference<Object> {
+	protected static class PlainTypeRef extends TypeReference<Object> {
 		Type type;
 		PlainTypeRef(Type type) {
 			this.type = type;
@@ -919,7 +925,7 @@ public class JsonServerServlet extends HttpServlet {
 		}
 	}
 	
-	private static class UnclosableOutputStream extends OutputStream {
+	protected static class UnclosableOutputStream extends OutputStream {
 		OutputStream inner;
 		boolean isClosed = false;
 		
