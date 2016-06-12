@@ -36,6 +36,8 @@ import org.slf4j.LoggerFactory;
  */
 public class GetMongoDB {
 	
+	//TODO needs rewrite. 1) Add tests, 2) deprecated methods, 2) replace NFE, 3) auth in constructor, 4) multiple hosts option, 5) logger on/off option 6) retry rewrite for mongo timeouts. 
+	
 	private static Logger getLogger() {
 		return LoggerFactory.getLogger(GetMongoDB.class);
 	}
