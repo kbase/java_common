@@ -13,6 +13,8 @@ NEW FEATURES:
 UPDATED FEATURES / MAJOR BUG FIXES:
 - Fixed a bug where the server would stop logging after a syslog daemon
   restart.
+- removed the UTCDateFormat class (use joda library classes instead).
+- removed UTF8Utils, unused.
 
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
