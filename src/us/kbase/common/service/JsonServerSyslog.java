@@ -244,6 +244,8 @@ public class JsonServerSyslog {
 			extractErrorLines(err.getCause(), true, messages);
 	}
 	
+	
+	//TODO add tests and then see if this can be combined with the above method
 	private void extractErrorLines(
 			final IThrowableProxy err,
 			final boolean isCause,

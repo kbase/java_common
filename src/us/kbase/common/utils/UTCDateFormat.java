@@ -19,6 +19,7 @@ public class UTCDateFormat {
 	
 	//TODO unit tests
 	//TODO allow milliseconds (or at least test if MS are allowed
+	//TODO remove. use JodaTime instead.
 	
 	private final SimpleDateFormat format =
 			new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
