@@ -163,8 +163,8 @@ public class JsonServerServlet extends HttpServlet {
 		}
 		
 		sysLogger = new JsonServerSyslog(getServiceName(specServiceName),
-				KB_DEP, LOG_LEVEL_INFO);
-		userLogger = new JsonServerSyslog(sysLogger);
+				KB_DEP, LOG_LEVEL_INFO, false);
+		userLogger = new JsonServerSyslog(sysLogger, true);
 		config = getConfig(specServiceName, sysLogger);
 	}
 	

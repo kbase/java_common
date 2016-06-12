@@ -18,6 +18,14 @@ import org.productivity.java.syslog4j.SyslogIF;
 import org.productivity.java.syslog4j.SyslogRuntimeException;
 import org.productivity.java.syslog4j.impl.unix.socket.UnixSocketSyslog;
 import org.productivity.java.syslog4j.impl.unix.socket.UnixSocketSyslogConfig;
+import org.slf4j.LoggerFactory;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.IThrowableProxy;
+import ch.qos.logback.classic.spi.StackTraceElementProxy;
+import ch.qos.logback.core.AppenderBase;
 
 /**
  * Class is used by server side for logging into linux/macos system syslog.
@@ -52,14 +60,14 @@ public class JsonServerSyslog {
 	private static String staticMlogFile = null;
 	
 	public JsonServerSyslog(String serviceName, String configFileParam) {
-		this(serviceName, configFileParam, -1);
+		this(serviceName, configFileParam, -1, false);
 	}
 
-	//TODO the interface here would more general if it just took a file and a log level, make the client class figure out the file path
 	public JsonServerSyslog(
 			final String serviceName,
 			final String configFileParam,
-			final int defultLogLevel) {
+			final int defultLogLevel,
+			final boolean logFromSLF4J) {
 		this.serviceName = serviceName;
 		logLevel = defultLogLevel;
 		if (staticUseSyslog) {
@@ -75,6 +83,9 @@ public class JsonServerSyslog {
 			log = null;
 		}
 		this.config = new Config(configFileParam, serviceName);
+		if (logFromSLF4J) {
+			setUpSLF4JLogger();
+		}
 	}
 	
 	/* DO NOT CHANGE THIS METHOD WITHOUT MANUAL TESTING!
@@ -110,11 +121,49 @@ public class JsonServerSyslog {
 		};
 		return log;
 	}
+	
+	private void setUpSLF4JLogger() {
+		final Logger kbaseRootLogger = (Logger) LoggerFactory.getLogger(
+				"us.kbase"); //should this be configurable?
+		//would be better to also set the level here on calls to the server
+		//setLogLevel, but meh for now
+		kbaseRootLogger.detachAndStopAllAppenders();
+		kbaseRootLogger.setLevel(Level.ALL);
+		final AppenderBase<ILoggingEvent> kbaseAppender =
+				new AppenderBase<ILoggingEvent>() {
+			@Override
+			protected void append(final ILoggingEvent event) {
+				final Level l = event.getLevel();
+				final String caller = event.getLoggerName();
+				if (l.equals(Level.TRACE)) {
+					log(LOG_LEVEL_DEBUG3, caller, event.getFormattedMessage());
+				} else if (l.equals(Level.DEBUG)) {
+					log(LOG_LEVEL_DEBUG, caller, event.getFormattedMessage());
+				} else if (l.equals(Level.INFO) || l.equals(Level.WARN)) {
+					log(LOG_LEVEL_INFO, caller, event.getFormattedMessage());
+				} else if (l.equals(Level.ERROR)) {
+					log(LOG_LEVEL_ERR, caller, event.getFormattedMessage());
+					if (event.getThrowableProxy() != null) {
+						final List<String> errs = new ArrayList<String>();
+						extractErrorLines(event.getThrowableProxy(), false,
+								errs);
+						log(LOG_LEVEL_ERR, caller,
+								errs.toArray(new String[errs.size()]));
+					}
+				}
+			}
+		};
+		kbaseAppender.start();
+		kbaseRootLogger.addAppender(kbaseAppender);
+	}
 
-	public JsonServerSyslog(JsonServerSyslog otherLog) {
+	public JsonServerSyslog(JsonServerSyslog otherLog, boolean logFromSLF4J) {
 		this.serviceName = otherLog.serviceName;
 		this.log = otherLog.log;
 		this.config = otherLog.config;
+		if (logFromSLF4J) {
+			setUpSLF4JLogger();
+		}
 	}
 
 	public void changeOutput(SyslogOutput output) {
@@ -190,6 +239,52 @@ public class JsonServerSyslog {
 		for (int pos = lastPos; pos >= firstPos; pos--) {
 			messages.add("Class \"" + st[pos].getClassName() + "\", file \"" + st[pos].getFileName() + 
 					"\", line " + st[pos].getLineNumber() + ", in " + st[pos].getMethodName());
+		}
+		if (err.getCause() != null)
+			extractErrorLines(err.getCause(), true, messages);
+	}
+	
+	private void extractErrorLines(
+			final IThrowableProxy err,
+			final boolean isCause,
+			final List<String> messages) {
+		final StackTraceElementProxy[] st =
+				err.getStackTraceElementProxyArray();
+		int firstPos;
+		String packageName = "us.kbase"; //configurable?
+		String className = JsonServerServlet.class.getName();
+		String className2 = JsonServerSyslog.class.getName();
+		for (firstPos = 0; firstPos < st.length; firstPos++) {
+			final String cn = st[firstPos].getStackTraceElement()
+					.getClassName();
+			if (!cn.equals(className) && !cn.equals(className2)) {
+				break;
+			}
+		}
+		if (firstPos == st.length) {
+			firstPos = 0;
+		}
+		int lastPos = st.length - 1;
+		for (; lastPos > firstPos; lastPos--) {
+			final String cn = st[lastPos].getStackTraceElement()
+					.getClassName();
+			if (cn.startsWith(packageName) && !cn.equals(className) &&
+					!cn.equals(className2)) {
+				break;
+			}
+		}
+		String errorPrefix = err.getClassName().equals("java.lang.Exception") ?
+				"Error: " : err.getClassName() + ": ";
+		if (isCause)
+			errorPrefix = "Cause of error above: " + errorPrefix;
+		messages.add(errorPrefix + err.getMessage());
+		messages.add("Traceback (most recent call last):");
+		for (int pos = lastPos; pos >= firstPos; pos--) {
+			final StackTraceElement ste = st[pos].getStackTraceElement();
+			messages.add("Class \"" + ste.getClassName() +
+					"\", file \"" + ste.getFileName() + 
+					"\", line " + ste.getLineNumber() +
+					", in " + ste.getMethodName());
 		}
 		if (err.getCause() != null)
 			extractErrorLines(err.getCause(), true, messages);
