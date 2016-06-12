@@ -4,6 +4,19 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.0.16 (Released TBD)
+--------------------------------------
+
+NEW FEATURES:
+- The JsonServerSyslog class now logs SLF4J messages.
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- Fixed a bug where the server would stop logging after a syslog daemon
+  restart.
+
+ANTICIPATED FUTURE DEVELOPMENTS:
+- None
+
 VERSION: 0.0.15 (Released 1/24/2015)
 --------------------------------------
 
