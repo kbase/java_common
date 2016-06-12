@@ -34,7 +34,7 @@
   <fileset dir="${jardir}" id="lib">
     <include name="apache_commons/commons-lang3-3.1.jar"/>
     <include name="junit/junit-4.9.jar"/>
-    <include name="mongo/mongo-java-driver-2.11.2.jar"/>
+    <include name="mongo/mongo-java-driver-2.13.3.jar"/>
     <include name="jackson/jackson-core-2.2.3.jar"/>
     <include name="jackson/jackson-databind-2.2.3.jar"/>
     <include name="jackson/jackson-annotations-2.2.3.jar"/>
@@ -77,7 +77,7 @@
 
   <target name="compile" depends="init, definejarfile" description="compile the source">
     <!-- Compile class files-->
-    <javac destdir="${classes}" includeantruntime="false" target="1.6" source="1.6"
+    <javac destdir="${classes}" includeantruntime="false"
       debug="true" classpathref="compile.classpath">
       <src path="${src}"/>
       <exclude name="us/kbase/common/performance/**"/>
@@ -120,7 +120,7 @@
 
   <target name="test" depends="compile, preparejunitreportdir" description="run tests">
     <echo message="starting ${package} tests"/>
-    <junit failureproperty="test.failed" printsummary="yes">
+    <junit failureproperty="test.failed" printsummary="yes" fork="yes">
       <classpath path="${jarfile}.jar"/>
       <classpath refid="compile.classpath"/>
       <formatter type="plain" usefile="false"/>
