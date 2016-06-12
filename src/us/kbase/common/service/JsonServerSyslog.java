@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
+import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -14,6 +15,7 @@ import java.util.Map;
 import org.ini4j.Ini;
 import org.productivity.java.syslog4j.SyslogConstants;
 import org.productivity.java.syslog4j.SyslogIF;
+import org.productivity.java.syslog4j.SyslogRuntimeException;
 import org.productivity.java.syslog4j.impl.unix.socket.UnixSocketSyslog;
 import org.productivity.java.syslog4j.impl.unix.socket.UnixSocketSyslogConfig;
 
@@ -52,24 +54,61 @@ public class JsonServerSyslog {
 	public JsonServerSyslog(String serviceName, String configFileParam) {
 		this(serviceName, configFileParam, -1);
 	}
-	
+
 	//TODO the interface here would more general if it just took a file and a log level, make the client class figure out the file path
-	public JsonServerSyslog(String serviceName, String configFileParam, int defultLogLevel) {
+	public JsonServerSyslog(
+			final String serviceName,
+			final String configFileParam,
+			final int defultLogLevel) {
 		this.serviceName = serviceName;
 		logLevel = defultLogLevel;
-        if (staticUseSyslog) {
-            UnixSocketSyslogConfig cfg = new UnixSocketSyslogConfig();
-            if (System.getProperty("os.name").toLowerCase().startsWith("mac"))
-                cfg.setPath("/var/run/syslog");
-            cfg.setFacility(SyslogConstants.FACILITY_LOCAL1);
-            cfg.removeAllMessageModifiers();
-            cfg.setIdent(null);
-		    log = new UnixSocketSyslog();
-		    log.initialize(SyslogConstants.UNIX_SOCKET, cfg);
+		if (staticUseSyslog) {
+			UnixSocketSyslogConfig cfg = new UnixSocketSyslogConfig();
+			if (System.getProperty("os.name").toLowerCase().startsWith("mac"))
+				cfg.setPath("/var/run/syslog");
+			cfg.setFacility(SyslogConstants.FACILITY_LOCAL1);
+			cfg.removeAllMessageModifiers();
+			cfg.setIdent(null);
+			log = createLogger();
+			log.initialize(SyslogConstants.UNIX_SOCKET, cfg);
 		} else {
-		    log = null;
+			log = null;
 		}
 		this.config = new Config(configFileParam, serviceName);
+	}
+	
+	/* DO NOT CHANGE THIS METHOD WITHOUT MANUAL TESTING!
+	 * This method adds a fix to the unix logger that forces a reconnect
+	 * if the syslog daemon has been restarted. Without this fix, the 
+	 * server stops logging after a syslog daemon restart.
+	 */
+	private SyslogIF createLogger() {
+		@SuppressWarnings("serial")
+		final SyslogIF log = new UnixSocketSyslog() {
+			@Override
+			protected void write(int level, byte[] message)
+					throws SyslogRuntimeException {
+				if (this.fd == -1) {
+					connect();
+				}
+				if (this.fd == -1) {
+					return;
+				}
+				final ByteBuffer byteBuffer = ByteBuffer.wrap(message);
+				int ret = this.libraryInstance.write(
+						this.fd,byteBuffer,message.length);
+				if (ret < 0) {
+					shutdown();
+					connect();
+					if (this.fd == -1) {
+						return;
+					}
+					ret = this.libraryInstance.write(
+							this.fd,byteBuffer,message.length);
+				}
+			}
+		};
+		return log;
 	}
 
 	public JsonServerSyslog(JsonServerSyslog otherLog) {
@@ -319,8 +358,8 @@ public class JsonServerSyslog {
 				if (section == null)
 					return;
 				String filePath = staticMlogFile;
-                if (filePath == null)
-                    filePath = section.get("mlog_log_file");
+				if (filePath == null)
+					filePath = section.get("mlog_log_file");
 				if (filePath != null)
 					externalLogFile = new File(filePath);
 				String logLevelText = section.get("mlog_log_level");
@@ -332,12 +371,12 @@ public class JsonServerSyslog {
 			}
 		}
 	}
-	
+
 	public static class SyslogOutput {
 		public void logToSystem(SyslogIF log, int level, String message) {
 			try {
-			    if (log != null)
-			        log.log(level, message);
+				if (log != null)
+					log.log(level, message);
 				//log.flush();
 			} catch (Throwable ex) {
 				System.out.println("JsonServerSyslog: Error writing to syslog (" + ex.getMessage() + "), see user defined log-file instead of syslog.");
