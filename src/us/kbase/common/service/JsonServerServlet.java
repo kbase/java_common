@@ -6,7 +6,6 @@ import us.kbase.auth.AuthService;
 import us.kbase.auth.AuthToken;
 import us.kbase.auth.AuthUser;
 import us.kbase.auth.ConfigurableAuthService;
-import us.kbase.common.utils.UTCDateFormat;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -27,7 +26,6 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,6 +40,9 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.ini4j.Ini;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -91,9 +92,11 @@ public class JsonServerServlet extends HttpServlet {
 	private int maxRpcMemoryCacheSize = 16 * 1024 * 1024;
 	private File rpcDiskCacheTempDir = null;
 	private final String specServiceName;
-	private final UTCDateFormat utcDatetimeFormat = new UTCDateFormat();
 	private String serviceVersion = null;
 		
+	private final static DateTimeFormatter DATE_FORMATTER =
+			DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZoneUTC();
+
 	/**
 	 * Starts a test jetty server on an OS-determined port. Blocks until the
 	 * server is terminated.
@@ -163,8 +166,8 @@ public class JsonServerServlet extends HttpServlet {
 		}
 		
 		sysLogger = new JsonServerSyslog(getServiceName(specServiceName),
-				KB_DEP, LOG_LEVEL_INFO);
-		userLogger = new JsonServerSyslog(sysLogger);
+				KB_DEP, LOG_LEVEL_INFO, false);
+		userLogger = new JsonServerSyslog(sysLogger, true);
 		config = getConfig(specServiceName, sysLogger);
 	}
 	
@@ -299,10 +302,10 @@ public class JsonServerServlet extends HttpServlet {
 	}
 
 	/** Set up server response headers.
-	 * * Sets Access-Control-Allow-Origin: *
-	 * * Sets HTTP_ACCESS_CONTROL_REQUEST_HEADERS to the contents of the
+	 * Sets Access-Control-Allow-Origin: *
+	 * Sets HTTP_ACCESS_CONTROL_REQUEST_HEADERS to the contents of the
 	 * request Access-Control-Allow-Headers, or a minimum of "authorization"
-	 * * Sets the content type to application/json
+	 * Sets the content type to application/json
 	 * @param request the HTTP request
 	 * @param response the HTTP response
 	 */
@@ -376,104 +379,104 @@ public class JsonServerServlet extends HttpServlet {
 				jts = new JsonTokenStream(bufferOs.toByteArray());
 			}
 			bufferOs = null;
-            String token = request.getHeader("Authorization");
-            String requestHeaderXFF = request.getHeader(X_FORWARDED_FOR);
-            RpcCallData rpcCallData;
-            try {
-                rpcCallData = mapper.readValue(jts, RpcCallData.class);
-            } catch (Exception ex) {
-                writeError(respStatus, -32700, "Parse error (" + ex.getMessage() + ")", ex, output);
-                return;
-            } finally {
-                jts.close();
-            }
-            Object idNode = rpcCallData.getId();
-            try {
-                info.setId(idNode == null ? null : "" + idNode);
-            } catch (Exception ex) {}
-            String rpcName = rpcCallData.getMethod();
-            if (rpcName == null) {
-                writeError(respStatus, -32601, "JSON RPC method property is not defined", output);
-                return;
-            }
-            rpcName = correctRpcMethod(rpcName);
-            List<UObject> paramsList = rpcCallData.getParams();
-            if (paramsList == null) {
-                writeError(respStatus, -32601, "JSON RPC params property is not defined", output);
-                return;
-            }
-            if (!rpcName.contains(".")) {
-                rpcName = specServiceName + "." + rpcName;
-                rpcCallData.setMethod(rpcName);
-            }
-            RpcContext context = rpcCallData.getContext();
-            if (context == null) {
-                context = new RpcContext();
-                rpcCallData.setContext(context);
-            }
-            if (context.getCallStack() == null)
-                context.setCallStack(new ArrayList<MethodCall>());
-            context.getCallStack().add(new MethodCall().withMethod(rpcName)
-                    .withTime(utcDatetimeFormat.formatDate(new Date())));
+			String token = request.getHeader("Authorization");
+			String requestHeaderXFF = request.getHeader(X_FORWARDED_FOR);
+			RpcCallData rpcCallData;
+			try {
+				rpcCallData = mapper.readValue(jts, RpcCallData.class);
+			} catch (Exception ex) {
+				writeError(respStatus, -32700, "Parse error (" + ex.getMessage() + ")", ex, output);
+				return;
+			} finally {
+				jts.close();
+			}
+			Object idNode = rpcCallData.getId();
+			try {
+				info.setId(idNode == null ? null : "" + idNode);
+			} catch (Exception ex) {}
+			String rpcName = rpcCallData.getMethod();
+			if (rpcName == null) {
+				writeError(respStatus, -32601, "JSON RPC method property is not defined", output);
+				return;
+			}
+			rpcName = correctRpcMethod(rpcName);
+			List<UObject> paramsList = rpcCallData.getParams();
+			if (paramsList == null) {
+				writeError(respStatus, -32601, "JSON RPC params property is not defined", output);
+				return;
+			}
+			if (!rpcName.contains(".")) {
+				rpcName = specServiceName + "." + rpcName;
+				rpcCallData.setMethod(rpcName);
+			}
+			RpcContext context = rpcCallData.getContext();
+			if (context == null) {
+				context = new RpcContext();
+				rpcCallData.setContext(context);
+			}
+			if (context.getCallStack() == null)
+				context.setCallStack(new ArrayList<MethodCall>());
+			context.getCallStack().add(new MethodCall().withMethod(rpcName)
+					.withTime(DATE_FORMATTER.print(new DateTime())));
 			processRpcCall(rpcCallData, token, info, requestHeaderXFF, respStatus, output, false);
 		} catch (Exception ex) {
-		    writeError(respStatus, -32400, "Unexpected internal error (" + ex.getMessage() + ")", ex, output);    
+			writeError(respStatus, -32400, "Unexpected internal error (" + ex.getMessage() + ")", ex, output);    
 		} finally {
-		    if (jts != null) {
-		        try {
-		            jts.close();
-		        } catch (Exception ignore) {}
-		        if (tempFile != null) {
-		            try {
-		                tempFile.delete();
-		            } catch (Exception ignore) {}
-		        }
-		    }
+			if (jts != null) {
+				try {
+					jts.close();
+				} catch (Exception ignore) {}
+				if (tempFile != null) {
+					try {
+						tempFile.delete();
+					} catch (Exception ignore) {}
+				}
+			}
 		}
 	}
-	
+
 	protected int processRpcCall(File input, File output, String token) {
-        JsonServerSyslog.RpcInfo info = JsonServerSyslog.getCurrentRpcInfo().reset();
-        final int[] responseCode = {0};
-        ResponseStatusSetter response = new ResponseStatusSetter() {
-            @Override
-            public void setStatus(int status) {
-                responseCode[0] = status;
-            }
-        };
-	    OutputStream os = null;
-	    try {
-	        File tokenFile = new File(token);
-	        if (tokenFile.exists()) {
-	            BufferedReader br = new BufferedReader(new FileReader(tokenFile));
-	            token = br.readLine();
-	            br.close();
-	        }
-	        os = new FileOutputStream(output);
-	        RpcCallData rpcCallData = mapper.readValue(input, RpcCallData.class);
-	        processRpcCall(rpcCallData, token, info, null, response, os, true);
-	    } catch (Throwable ex) {
-            writeError(response, -32400, "Unexpected internal error (" + ex.getMessage() + ")", ex, os);    
-	    } finally {
-	        if (os != null)
-	            try {
-	                os.close();
-	            } catch (Exception ignore) {}
-	    }
-	    return responseCode[0];
+		JsonServerSyslog.RpcInfo info = JsonServerSyslog.getCurrentRpcInfo().reset();
+		final int[] responseCode = {0};
+		ResponseStatusSetter response = new ResponseStatusSetter() {
+			@Override
+			public void setStatus(int status) {
+				responseCode[0] = status;
+			}
+		};
+		OutputStream os = null;
+		try {
+			File tokenFile = new File(token);
+			if (tokenFile.exists()) {
+				BufferedReader br = new BufferedReader(new FileReader(tokenFile));
+				token = br.readLine();
+				br.close();
+			}
+			os = new FileOutputStream(output);
+			RpcCallData rpcCallData = mapper.readValue(input, RpcCallData.class);
+			processRpcCall(rpcCallData, token, info, null, response, os, true);
+		} catch (Throwable ex) {
+			writeError(response, -32400, "Unexpected internal error (" + ex.getMessage() + ")", ex, os);    
+		} finally {
+			if (os != null)
+				try {
+					os.close();
+				} catch (Exception ignore) {}
+		}
+		return responseCode[0];
 	}
-	
+
 	protected void processRpcCall(RpcCallData rpcCallData, String token, JsonServerSyslog.RpcInfo info, 
-	        String requestHeaderXForwardedFor, ResponseStatusSetter response, OutputStream output,
-	        boolean commandLine) {
-        RpcContext context = rpcCallData.getContext();
-	    String rpcName = rpcCallData.getMethod();
-	    String[] serviceAndMethod = rpcName.split("\\.");
-        info.setModule(serviceAndMethod[0]);
-        info.setMethod(serviceAndMethod[1]);
-	    List<UObject> paramsList = rpcCallData.getParams();
-	    AuthToken userProfile = null;
-	    try {
+			String requestHeaderXForwardedFor, ResponseStatusSetter response, OutputStream output,
+			boolean commandLine) {
+		RpcContext context = rpcCallData.getContext();
+		String rpcName = rpcCallData.getMethod();
+		String[] serviceAndMethod = rpcName.split("\\.");
+		info.setModule(serviceAndMethod[0]);
+		info.setMethod(serviceAndMethod[1]);
+		List<UObject> paramsList = rpcCallData.getParams();
+		AuthToken userProfile = null;
+		try {
 			Method rpcMethod = rpcCache.get(rpcName);
 			if (rpcMethod == null) {
 				writeError(response, -32601, "Can not find method [" + rpcName + "] in server class " + getClass().getName(), output);
@@ -481,170 +484,170 @@ public class JsonServerServlet extends HttpServlet {
 			}
 			String origRpcName = rpcMethod.getAnnotation(JsonServerMethod.class).rpc();
 			if (origRpcName.equals(rpcName)) {
-			    if (!(commandLine || rpcMethod.getAnnotation(JsonServerMethod.class).sync())) {
-	                writeError(response, -32601, "Method " + rpcName + " cannot be run synchronously", output);
-	                return;			        
-			    }
-			    int rpcArgCount = rpcMethod.getGenericParameterTypes().length;
-			    Object[] methodValues = new Object[rpcArgCount];
-                boolean lastParamRpcContext = rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].equals(RpcContext.class);
-			    boolean lastParamRpcContextArr = rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].isArray() && 
-                        rpcMethod.getParameterTypes()[rpcArgCount - 1].getComponentType().equals(RpcContext.class);
-			    if (lastParamRpcContext || lastParamRpcContextArr) {
-                    if (prepareProvenanceAutomatically()) {
-                        try {
-                            Class<?> paType = Class.forName("us.kbase.workspace.ProvenanceAction");
-                            Object pa = paType.newInstance();
-                            paType.getMethod("setService", String.class).invoke(pa, info.getModule());
-                            paType.getMethod("setMethod", String.class).invoke(pa, info.getMethod());
-                            paType.getMethod("setMethodParams", List.class).invoke(pa, paramsList);
-                            List<Object> provenance = new ArrayList<Object>();
-                            provenance.add(pa);
-                            if (context == null)
-                                context = new RpcContext();
-                            context.setProvenance(provenance);
-                        } catch (ClassNotFoundException ignore) {}
-                    }
-                    rpcArgCount--;
-                    if (lastParamRpcContext) {
-                        methodValues[rpcArgCount] = context;                        
-                    } else {
-                        methodValues[rpcArgCount] = new RpcContext[] {context};
-                    }
-                }
-			    if (rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].equals(AuthToken.class)) {
-			        if (token != null || !rpcMethod.getAnnotation(JsonServerMethod.class).authOptional()) {
-			            try {
-			                userProfile = validateToken(token, config.get(CONFIG_AUTH_SERVICE_URL_PARAM));
-			                if (userProfile != null)
-			                    info.setUser(userProfile.getClientId());
-			            } catch (Throwable ex) {
-			                writeError(response, -32400, "Token validation failed: " + ex.getMessage(), ex, output);
-			                return;
-			            }
-			        }
-			        rpcArgCount--;
-			        methodValues[rpcArgCount] = userProfile;
-			    }
-			    if (startupFailed) {
-			        writeError(response, -32603, "The server did not start up properly. Please check the log files for the cause.", output);
-			        return;
-			    }
-			    if (paramsList.size() != rpcArgCount) {
-			        writeError(response, -32602, "Wrong parameter count for method " + rpcName, output);
-			        return;
-			    }
-			    for (int typePos = 0; typePos < paramsList.size(); typePos++) {
-			        UObject jsonData = paramsList.get(typePos);
-			        Type paramType = rpcMethod.getGenericParameterTypes()[typePos];
-			        PlainTypeRef paramJavaType = new PlainTypeRef(paramType);
-			        try {
-			            Object obj;
-			            if (jsonData == null) {
-			                obj = null;
-			            } else if (paramType instanceof Class && paramType.equals(UObject.class)) {
-			                obj = jsonData;
-			            } else {
-			                try {
-			                    obj = mapper.readValue(jsonData.getPlacedStream(), paramJavaType);
-			                } finally {
-			                    if (jsonData.isTokenStream())
-			                        ((JsonTokenStream)jsonData.getUserObject()).close();
-			                }
-			            }
-			            methodValues[typePos] = obj;
-			        } catch (Exception ex) {
-			            writeError(response, -32602, "Wrong type of parameter " + typePos + " for method " + rpcName + " (" + ex.getMessage() + ")", ex, output);	
-			            return;
-			        }
-			    }
-			    Object result;
-			    try {
-			        logHeaders(requestHeaderXForwardedFor);
-			        sysLogger.log(LOG_LEVEL_INFO, getClass().getName(), "start method");
-			        result = rpcMethod.invoke(this, methodValues);
-			        sysLogger.log(LOG_LEVEL_INFO, getClass().getName(), "end method");
-			    } catch (Throwable ex) {
-			        if (ex instanceof InvocationTargetException && ex.getCause() != null) {
-			            ex = ex.getCause();
-			        }
-			        writeError(response, -32500, ex, output);
-			        onRpcMethodDone();
-			        return;
-			    }
-			    try {
-			        boolean notVoid = !rpcMethod.getReturnType().equals(Void.TYPE);
-			        boolean isTuple = rpcMethod.getAnnotation(JsonServerMethod.class).tuple();
-			        if (notVoid && !isTuple) {
-			            result = Arrays.asList(result);
-			        }
-			        Map<String, Object> ret = new LinkedHashMap<String, Object>();
-			        ret.put("version", "1.1");
-			        ret.put("result", result);
-			        mapper.writeValue(new UnclosableOutputStream(output), ret);
-			        output.flush();
-			    } finally {
-			        try {
-			            onRpcMethodDone();
-			        } catch (Exception ignore) {}
-			    }
+				if (!(commandLine || rpcMethod.getAnnotation(JsonServerMethod.class).sync())) {
+					writeError(response, -32601, "Method " + rpcName + " cannot be run synchronously", output);
+					return;
+				}
+				int rpcArgCount = rpcMethod.getGenericParameterTypes().length;
+				Object[] methodValues = new Object[rpcArgCount];
+				boolean lastParamRpcContext = rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].equals(RpcContext.class);
+				boolean lastParamRpcContextArr = rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].isArray() && 
+						rpcMethod.getParameterTypes()[rpcArgCount - 1].getComponentType().equals(RpcContext.class);
+				if (lastParamRpcContext || lastParamRpcContextArr) {
+					if (prepareProvenanceAutomatically()) {
+						try {
+							Class<?> paType = Class.forName("us.kbase.workspace.ProvenanceAction");
+							Object pa = paType.newInstance();
+							paType.getMethod("setService", String.class).invoke(pa, info.getModule());
+							paType.getMethod("setMethod", String.class).invoke(pa, info.getMethod());
+							paType.getMethod("setMethodParams", List.class).invoke(pa, paramsList);
+							List<Object> provenance = new ArrayList<Object>();
+							provenance.add(pa);
+							if (context == null)
+								context = new RpcContext();
+							context.setProvenance(provenance);
+						} catch (ClassNotFoundException ignore) {}
+					}
+					rpcArgCount--;
+					if (lastParamRpcContext) {
+						methodValues[rpcArgCount] = context;
+					} else {
+						methodValues[rpcArgCount] = new RpcContext[] {context};
+					}
+				}
+				if (rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].equals(AuthToken.class)) {
+					if (token != null || !rpcMethod.getAnnotation(JsonServerMethod.class).authOptional()) {
+						try {
+							userProfile = validateToken(token, config.get(CONFIG_AUTH_SERVICE_URL_PARAM));
+							if (userProfile != null)
+								info.setUser(userProfile.getClientId());
+						} catch (Throwable ex) {
+							writeError(response, -32400, "Token validation failed: " + ex.getMessage(), ex, output);
+							return;
+						}
+					}
+					rpcArgCount--;
+					methodValues[rpcArgCount] = userProfile;
+				}
+				if (startupFailed) {
+					writeError(response, -32603, "The server did not start up properly. Please check the log files for the cause.", output);
+					return;
+				}
+				if (paramsList.size() != rpcArgCount) {
+					writeError(response, -32602, "Wrong parameter count for method " + rpcName, output);
+					return;
+				}
+				for (int typePos = 0; typePos < paramsList.size(); typePos++) {
+					UObject jsonData = paramsList.get(typePos);
+					Type paramType = rpcMethod.getGenericParameterTypes()[typePos];
+					PlainTypeRef paramJavaType = new PlainTypeRef(paramType);
+					try {
+						Object obj;
+						if (jsonData == null) {
+							obj = null;
+						} else if (paramType instanceof Class && paramType.equals(UObject.class)) {
+							obj = jsonData;
+						} else {
+							try {
+								obj = mapper.readValue(jsonData.getPlacedStream(), paramJavaType);
+							} finally {
+								if (jsonData.isTokenStream())
+									((JsonTokenStream)jsonData.getUserObject()).close();
+							}
+						}
+						methodValues[typePos] = obj;
+					} catch (Exception ex) {
+						writeError(response, -32602, "Wrong type of parameter " + typePos + " for method " + rpcName + " (" + ex.getMessage() + ")", ex, output);	
+								return;
+					}
+				}
+				Object result;
+				try {
+					logHeaders(requestHeaderXForwardedFor);
+					sysLogger.log(LOG_LEVEL_INFO, getClass().getName(), "start method");
+					result = rpcMethod.invoke(this, methodValues);
+					sysLogger.log(LOG_LEVEL_INFO, getClass().getName(), "end method");
+				} catch (Throwable ex) {
+					if (ex instanceof InvocationTargetException && ex.getCause() != null) {
+						ex = ex.getCause();
+					}
+					writeError(response, -32500, ex, output);
+					onRpcMethodDone();
+					return;
+				}
+				try {
+					boolean notVoid = !rpcMethod.getReturnType().equals(Void.TYPE);
+					boolean isTuple = rpcMethod.getAnnotation(JsonServerMethod.class).tuple();
+					if (notVoid && !isTuple) {
+						result = Arrays.asList(result);
+					}
+					Map<String, Object> ret = new LinkedHashMap<String, Object>();
+					ret.put("version", "1.1");
+					ret.put("result", result);
+					mapper.writeValue(new UnclosableOutputStream(output), ret);
+					output.flush();
+				} finally {
+					try {
+						onRpcMethodDone();
+					} catch (Exception ignore) {}
+				}
 			} else {
-	            if (token == null) {
-                    writeError(response, -32400, "Authentication is required for using job service", output);
-                    return;
-	            }
-                try {
-                    userProfile = validateToken(token, config.get(CONFIG_AUTH_SERVICE_URL_PARAM));
-                    if (userProfile != null)
-                        info.setUser(userProfile.getClientId());
-                } catch (Throwable ex) {
-                    writeError(response, -32400, "Token validation failed: " + ex.getMessage(), ex, output);
-                    return;
-                }
-                JsonClientCaller jobService = getJobServiceClient(userProfile);
-                List<Object> result = null;
-			    if (rpcName.equals(origRpcName + "_async")) {
-	                List<Object> runJobParams = new ArrayList<Object>();
-	                Map<String, Object> paramMap = new LinkedHashMap<String, Object>();
-	                runJobParams.add(paramMap);
-	                paramMap.put("service_ver", getServiceVersion());
-	                paramMap.put("method", origRpcName);
-	                paramMap.put("params", paramsList);
-	                paramMap.put("rpc_context", context);
-	                TypeReference<List<Object>> retType = new TypeReference<List<Object>>() {};
-	                result = jobService.jsonrpcCall("KBaseJobService.run_job", runJobParams, retType, true, true);
-			    } else if (rpcName.equals(origRpcName + "_check")) {
-	                TypeReference<List<JobState<UObject>>> retType = new TypeReference<List<JobState<UObject>>>() {};
-	                List<JobState<UObject>> jobStateList = jobService.jsonrpcCall("KBaseJobService.check_job", paramsList, retType, true, true);
-	                JobState<UObject> jobState = jobStateList.get(0);
-	                Long finished = jobState.getFinished();
-	                if (finished != 0L) {
-	                    Object error = jobState.getAdditionalProperties().get("error");
-	                    if (error != null) {
-	                        Map<String, Object> ret = new LinkedHashMap<String, Object>();
-	                        ret.put("version", "1.1");
-	                        ret.put("error", error);
-	                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-	                        mapper.writeValue(new UnclosableOutputStream(output), ret);
-	                        output.flush();
-	                        return;
-	                    }
-	                }
-	                result = new ArrayList<Object>();
-	                result.add(jobState);
-			    } else {
-			        writeError(response, -32601, "Can not find method [" + rpcName + "] in server class " + getClass().getName(), output);
-			        return;
-			    }
-                Map<String, Object> ret = new LinkedHashMap<String, Object>();
-                ret.put("version", "1.1");
-                ret.put("result", result);
-                mapper.writeValue(new UnclosableOutputStream(output), ret);
-                output.flush();
-            }
-        } catch (Exception ex) {
-            writeError(response, -32400, "Unexpected internal error (" + ex.getMessage() + ")", ex, output);
-        }
+				if (token == null) {
+					writeError(response, -32400, "Authentication is required for using job service", output);
+					return;
+				}
+				try {
+					userProfile = validateToken(token, config.get(CONFIG_AUTH_SERVICE_URL_PARAM));
+					if (userProfile != null)
+						info.setUser(userProfile.getClientId());
+				} catch (Throwable ex) {
+					writeError(response, -32400, "Token validation failed: " + ex.getMessage(), ex, output);
+					return;
+				}
+				JsonClientCaller jobService = getJobServiceClient(userProfile);
+				List<Object> result = null;
+				if (rpcName.equals(origRpcName + "_async")) {
+					List<Object> runJobParams = new ArrayList<Object>();
+					Map<String, Object> paramMap = new LinkedHashMap<String, Object>();
+					runJobParams.add(paramMap);
+					paramMap.put("service_ver", getServiceVersion());
+					paramMap.put("method", origRpcName);
+					paramMap.put("params", paramsList);
+					paramMap.put("rpc_context", context);
+					TypeReference<List<Object>> retType = new TypeReference<List<Object>>() {};
+					result = jobService.jsonrpcCall("KBaseJobService.run_job", runJobParams, retType, true, true);
+				} else if (rpcName.equals(origRpcName + "_check")) {
+					TypeReference<List<JobState<UObject>>> retType = new TypeReference<List<JobState<UObject>>>() {};
+					List<JobState<UObject>> jobStateList = jobService.jsonrpcCall("KBaseJobService.check_job", paramsList, retType, true, true);
+					JobState<UObject> jobState = jobStateList.get(0);
+					Long finished = jobState.getFinished();
+					if (finished != 0L) {
+						Object error = jobState.getAdditionalProperties().get("error");
+						if (error != null) {
+							Map<String, Object> ret = new LinkedHashMap<String, Object>();
+							ret.put("version", "1.1");
+							ret.put("error", error);
+							response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+							mapper.writeValue(new UnclosableOutputStream(output), ret);
+							output.flush();
+							return;
+						}
+					}
+					result = new ArrayList<Object>();
+					result.add(jobState);
+				} else {
+					writeError(response, -32601, "Can not find method [" + rpcName + "] in server class " + getClass().getName(), output);
+					return;
+				}
+				Map<String, Object> ret = new LinkedHashMap<String, Object>();
+				ret.put("version", "1.1");
+				ret.put("result", result);
+				mapper.writeValue(new UnclosableOutputStream(output), ret);
+				output.flush();
+			}
+		} catch (Exception ex) {
+			writeError(response, -32400, "Unexpected internal error (" + ex.getMessage() + ")", ex, output);
+		}
 	}
 
 	protected void logHeaders(final String xFF) {
@@ -672,7 +675,7 @@ public class JsonServerServlet extends HttpServlet {
 		final boolean trustXHeaders =
 				!STRING_TRUE.equals(config.get(DONT_TRUST_X_IP_HEADERS)) &&
 				!STRING_TRUE.equals(config.get(DONT_TRUST_X_IP_HEADERS2));
-		
+
 		if (trustXHeaders) {
 			if (xFF != null && !xFF.isEmpty()) {
 				return xFF.split(",")[0].trim();
@@ -688,15 +691,15 @@ public class JsonServerServlet extends HttpServlet {
 		// Do nothing. Inherited classes can use for method/module name correction.
 		return methodWithModule;
 	}
-	
+
 	protected void checkMemoryForRpc() {
 		// Do nothing. Inherited classes could define proper implementation.
 	}
-	
+
 	protected void onRpcMethodDone() {
 		// Do nothing. Inherited classes could define proper implementation.
 	}
-	
+
 	protected File generateTempFile() {
 		File tempFile = null;
 		long suffix = System.currentTimeMillis();
@@ -725,21 +728,21 @@ public class JsonServerServlet extends HttpServlet {
 		final AuthToken ret = new AuthToken(token);
 		final boolean validToken;
 		try {
-		    if (authUrl == null) {
-		        validToken = AuthService.validateToken(ret);
-		    } else {
-		        validToken = new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
-		                new URL(authUrl))).validateToken(ret);
-		    }
+			if (authUrl == null) {
+				validToken = AuthService.validateToken(ret);
+			} else {
+				validToken = new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
+						new URL(authUrl))).validateToken(ret);
+			}
 		} catch (UnknownHostException uhe) {
 			//message from UHE is only the host name
 			throw new AuthException(
-			        "Could not contact Authorization Service host to validate user token: " + 
-			                uhe.getMessage(), uhe);
+					"Could not contact Authorization Service host to validate user token: " + 
+							uhe.getMessage(), uhe);
 		} catch (URISyntaxException use) {
-		    throw new AuthException(
-		            "Could not contact Authorization Service url (" + (authUrl == null ? "default" : 
-		                authUrl) + ") to validate user token: " + use.getMessage(), use);
+			throw new AuthException(
+					"Could not contact Authorization Service url (" + (authUrl == null ? "default" : 
+						authUrl) + ") to validate user token: " + use.getMessage(), use);
 		}
 		if (!validToken) {
 			throw new AuthException("User token was invalid");
@@ -749,30 +752,30 @@ public class JsonServerServlet extends HttpServlet {
 
 	public static AuthUser getUserProfile(AuthToken token, String authUrl)
 			throws IOException, AuthException {
-	    if (authUrl == null) {
-	        return AuthService.getUserFromToken(token);
-	    } else {
-	        try {
-	            return new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
-	                    new URL(authUrl))).getUserFromToken(token);
-	        } catch (URISyntaxException use) {
-	            throw new AuthException(
-	                    "Could not contact Authorization Service url (" + (authUrl == null ? "default" : 
-	                        authUrl) + ") to get user profile: " + use.getMessage(), use);
-	        }
-	    }
+		if (authUrl == null) {
+			return AuthService.getUserFromToken(token);
+		} else {
+			try {
+				return new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
+						new URL(authUrl))).getUserFromToken(token);
+			} catch (URISyntaxException use) {
+				throw new AuthException(
+						"Could not contact Authorization Service url (" + (authUrl == null ? "default" : 
+							authUrl) + ") to get user profile: " + use.getMessage(), use);
+			}
+		}
 	}
-	
+
 	protected void writeError(ResponseStatusSetter response, int code, String message, OutputStream output) {
 		writeError(response, code, message, null, output);
 	}
-	
+
 	protected void writeError(ResponseStatusSetter response, int code, Throwable ex, OutputStream output) {
 		writeError(response, code, ex.getMessage(), ex, output);
 	}
-	
+
 	protected void writeError(ResponseStatusSetter response, int code, String message, Throwable ex, OutputStream output) {
-	    //new Exception(message, ex).printStackTrace();
+		//new Exception(message, ex).printStackTrace();
 		String data = null;
 		if (ex != null) {
 			StringWriter sw = new StringWriter();
@@ -828,62 +831,62 @@ public class JsonServerServlet extends HttpServlet {
 	public void setRpcDiskCacheTempDir(File rpcDiskCacheTempDir) {
 		this.rpcDiskCacheTempDir = rpcDiskCacheTempDir;
 	}
-	
+
 	protected ResponseStatusSetter wrap(final HttpServletResponse response) {
-	    return new ResponseStatusSetter() {
-            @Override
-            public void setStatus(int status) {
-                response.setStatus(status);
-            }
-        };
+		return new ResponseStatusSetter() {
+			@Override
+			public void setStatus(int status) {
+				response.setStatus(status);
+			}
+		};
 	}
-	
+
 	protected JsonClientCaller getJobServiceClient(AuthToken token) throws Exception {
-	    String url = System.getProperty(KB_JOB_SERVICE_URL);
-        if (url == null)
-            url = System.getenv(KB_JOB_SERVICE_URL);
-        if (url == null)
-            url = config.get(CONFIG_JOB_SERVICE_URL_PARAM);
-        if (url == null)
-            throw new IllegalStateException("Neither '" + CONFIG_JOB_SERVICE_URL_PARAM + "' " +
-                    "parameter is defined in configuration nor '" + KB_JOB_SERVICE_URL + "' " +
-                    "variable is defined in system");
-        JsonClientCaller ret = new JsonClientCaller(new URL(url), token);
-        ret.setInsecureHttpConnectionAllowed(true);
-        return ret;
-    }
-	
-	public String getServiceVersion() {
-        return serviceVersion;
-    }
-	
-	public void setServiceVersion(String serviceVersion) {
-        this.serviceVersion = serviceVersion;
-    }
-	
-	protected boolean prepareProvenanceAutomatically() {
-	    return true;
+		String url = System.getProperty(KB_JOB_SERVICE_URL);
+		if (url == null)
+			url = System.getenv(KB_JOB_SERVICE_URL);
+		if (url == null)
+			url = config.get(CONFIG_JOB_SERVICE_URL_PARAM);
+		if (url == null)
+			throw new IllegalStateException("Neither '" + CONFIG_JOB_SERVICE_URL_PARAM + "' " +
+					"parameter is defined in configuration nor '" + KB_JOB_SERVICE_URL + "' " +
+					"variable is defined in system");
+		JsonClientCaller ret = new JsonClientCaller(new URL(url), token);
+		ret.setInsecureHttpConnectionAllowed(true);
+		return ret;
 	}
-	
+
+	public String getServiceVersion() {
+		return serviceVersion;
+	}
+
+	public void setServiceVersion(String serviceVersion) {
+		this.serviceVersion = serviceVersion;
+	}
+
+	protected boolean prepareProvenanceAutomatically() {
+		return true;
+	}
+
 	public static class RpcCallData {
 		private Object id;
 		private String method;
 		private List<UObject> params;
 		private Object version;
 		private RpcContext context;
-		
+
 		public Object getId() {
 			return id;
 		}
-		
+
 		public void setId(Object id) {
 			this.id = id;
 		}
-		
+
 		public String getMethod() {
 			return method;
 		}
-		
+
 		public void setMethod(String method) {
 			this.method = method;
 		}
@@ -891,26 +894,26 @@ public class JsonServerServlet extends HttpServlet {
 		public List<UObject> getParams() {
 			return params;
 		}
-		
+
 		public void setParams(List<UObject> params) {
 			this.params = params;
 		}
-		
+
 		public Object getVersion() {
 			return version;
 		}
-		
+
 		public void setVersion(Object version) {
 			this.version = version;
 		}
-		
+
 		public RpcContext getContext() {
-            return context;
-        }
-		
+			return context;
+		}
+
 		public void setContext(RpcContext context) {
-            this.context = context;
-        }
+			this.context = context;
+		}
 	}
 	
 	protected static class PlainTypeRef extends TypeReference<Object> {
@@ -964,8 +967,8 @@ public class JsonServerServlet extends HttpServlet {
 			inner.write(b, off, len);
 		}
 	}
-	
+
 	public static interface ResponseStatusSetter {
-	    public void setStatus(int status);
+		public void setStatus(int status);
 	}
 }

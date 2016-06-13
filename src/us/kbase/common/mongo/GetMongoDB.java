@@ -13,6 +13,7 @@ import com.mongodb.DB;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoException;
+import com.mongodb.MongoTimeoutException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,8 @@ import org.slf4j.LoggerFactory;
  *
  */
 public class GetMongoDB {
+	
+	//TODO needs rewrite. 1) Add tests, 2) deprecated methods, 2) replace NFE, 3) auth in constructor, 4) multiple hosts option, 5) logger on/off option 6) retry rewrite for mongo timeouts. 
 	
 	private static Logger getLogger() {
 		return LoggerFactory.getLogger(GetMongoDB.class);
@@ -96,7 +99,7 @@ public class GetMongoDB {
 	 * @param host the MongoDB host address.
 	 * @param database the database to get.
 	 * @param retryCount - the number of times to retry the MongoDB
-	 * connection, 1 retry / sec. 
+	 * connection, 1 retry / sec, not including the time retrying takes. 
 	 * @param logIntervalCount - how often to log the retries. Logs occur when
 	 * retries % logIntervalCount = 0.
 	 * @return the MongoDB database instance.
@@ -120,9 +123,12 @@ public class GetMongoDB {
 			try {
 				db.getCollectionNames();
 				break;
-			} catch (MongoException.Network men) {
+			} catch (MongoException.Network | MongoTimeoutException e ) {
 				if (retries >= retryCount) {
-					throw (IOException) men.getCause();
+					if (e instanceof MongoException.Network) {
+						throw (IOException) e.getCause();
+					}
+					throw e;
 				}
 				if (retries % logIntervalCount == 0) {
 					getLogger().info(
@@ -165,7 +171,7 @@ public class GetMongoDB {
 	 * @param user the MongoDB user with access to the database.
 	 * @param pwd the MongoDB user's password.
 	 * @param retryCount - the number of times to retry the MongoDB
-	 * connection, 1 retry / sec. 
+	 * connection, 1 retry / sec, not including the time retrying takes. 
 	 * @param logIntervalCount - how often to log the retries. Logs occur when
 	 * retries % logIntervalCount = 0.
 	 * @return the MongoDB database instance.
@@ -191,9 +197,12 @@ public class GetMongoDB {
 			try {
 				db.authenticate(user, pwd.toCharArray());
 				break;
-			} catch (MongoException.Network men) {
+			} catch (MongoException.Network | MongoTimeoutException e) {
 				if (retries >= retryCount) {
-					throw (IOException) men.getCause();
+					if (e instanceof MongoException.Network) {
+						throw (IOException) e.getCause();
+					}
+					throw e;
 				}
 				if (retries % logIntervalCount == 0) {
 					getLogger().info(
