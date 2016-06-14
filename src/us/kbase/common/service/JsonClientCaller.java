@@ -15,6 +15,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -38,7 +39,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class JsonClientCaller {
 
 	public final URL serviceUrl;
-	private ObjectMapper mapper;
+	private static final ObjectMapper mapper = new ObjectMapper().registerModule(
+	        new JacksonTupleModule());;
 	private String user = null;
 	private char[] password = null;
 	private AuthToken accessToken = null;
@@ -47,6 +49,8 @@ public class JsonClientCaller {
 	private boolean streamRequest = false;
 	private Integer connectionReadTimeOut = 30 * 60 * 1000;
 	private File fileForNextRpcResponse = null;
+    private boolean isDynamic = false;
+    
 	private final URL authServiceUrl;
 	
 	private static TrustManager[] GULLIBLE_TRUST_MGR = new TrustManager[] {
@@ -74,7 +78,6 @@ public class JsonClientCaller {
     
 	public JsonClientCaller(URL url, URL authServiceUrl) {
 		serviceUrl = url;
-		mapper = new ObjectMapper().registerModule(new JacksonTupleModule());
 		this.authServiceUrl = authServiceUrl;
 	}
 
@@ -187,7 +190,18 @@ public class JsonClientCaller {
 		this.connectionReadTimeOut = connectionReadTimeOut;
 	}
 
-	private HttpURLConnection setupCall(boolean authRequired) throws IOException, JsonClientException {
+	public boolean isDynamic() {
+        return isDynamic;
+    }
+	
+	public void setDynamic(boolean isDynamic) {
+        this.isDynamic = isDynamic;
+    }
+	
+	private static HttpURLConnection setupCall(URL serviceUrl, boolean authRequired, 
+	        Integer connectionReadTimeOut, JsonClientCaller accessTokenHolder, 
+	        boolean allowInsecureHttp, String user, char[] password, URL authServiceUrl, 
+	        boolean trustAllCerts) throws IOException, JsonClientException {
 		HttpURLConnection conn = (HttpURLConnection) serviceUrl.openConnection();
 		conn.setConnectTimeout(10000);
 		if (connectionReadTimeOut != null) {
@@ -195,15 +209,15 @@ public class JsonClientCaller {
 		}
 		conn.setDoOutput(true);
 		conn.setRequestMethod("POST");
-		if (authRequired || accessToken != null) {
+		if (authRequired || accessTokenHolder.accessToken != null) {
 			if (!(conn instanceof HttpsURLConnection || allowInsecureHttp)) {
 				throw new UnauthorizedException("RPC method required authentication shouldn't " +
 						"be called through unsecured http, use https instead or call " +
 						"setAuthAllowedForHttp(true) for your client");
 			}
-			if (accessToken == null || accessToken.isExpired()) {
+			if (accessTokenHolder.accessToken == null || accessTokenHolder.accessToken.isExpired()) {
 				if (user == null) {
-					if (accessToken == null) {
+					if (accessTokenHolder.accessToken == null) {
 						throw new UnauthorizedException("RPC method requires authentication but neither " +
 								"user nor token was set");
 					} else {
@@ -211,9 +225,9 @@ public class JsonClientCaller {
 								"because user wasn't set");
 					}
 				}
-				accessToken = requestTokenFromKBase(user, password, authServiceUrl);
+				accessTokenHolder.accessToken = requestTokenFromKBase(user, password, authServiceUrl);
 			}
-			conn.setRequestProperty("Authorization", accessToken.toString());
+			conn.setRequestProperty("Authorization", accessTokenHolder.accessToken.toString());
 		}
 		if (conn instanceof HttpsURLConnection && trustAllCerts) {
 			final HttpsURLConnection hc = (HttpsURLConnection) conn;
@@ -270,14 +284,62 @@ public class JsonClientCaller {
     public <ARG, RET> RET jsonrpcCall(String method, ARG arg, TypeReference<RET> cls, 
             boolean ret, boolean authRequired, RpcContext[] context)
             throws IOException, JsonClientException {
+        return jsonrpcCall(method, arg, cls, ret, authRequired, context, null);
+    }
+    
+    public <ARG, RET> RET jsonrpcCall(String method, ARG arg, TypeReference<RET> cls, 
+            boolean ret, boolean authRequired, RpcContext[] context, String serviceVersion)
+            throws IOException, JsonClientException {
         return jsonrpcCall(method, arg, cls, ret, authRequired, 
-                context != null && context.length == 1 ? context[0] : null);
+                context != null && context.length == 1 ? context[0] : null, serviceVersion);
+    }
+
+    public <ARG, RET> RET jsonrpcCall(String method, ARG arg, TypeReference<RET> cls, 
+            boolean ret, boolean authRequired, RpcContext context)
+            throws IOException, JsonClientException {
+        return jsonrpcCall(method, arg, cls, ret, authRequired, context, null);
     }
     
 	public <ARG, RET> RET jsonrpcCall(String method, ARG arg, TypeReference<RET> cls, 
-	        boolean ret, boolean authRequired, RpcContext context)
+	        boolean ret, boolean authRequired, RpcContext context, String serviceVersion)
 			throws IOException, JsonClientException {
-		HttpURLConnection conn = setupCall(authRequired);
+	    URL url;
+	    if (isDynamic) {
+	        String serviceModuleName = method.split(Pattern.quote("."))[0];
+	        List<Object> serviceStatusArgs = new ArrayList<Object>();
+            Map<String, String> serviceStruct = new LinkedHashMap<String, String>();
+            serviceStruct.put("module_name", serviceModuleName);
+            serviceStruct.put("version", serviceVersion);
+            serviceStatusArgs.add(serviceStruct);
+            List<Map<String, Object>> serviceState = jsonrpcCallStatic(serviceUrl, 
+                    "ServiceWizard.get_service_status", serviceStatusArgs, 
+                    new TypeReference<List<Map<String, Object>>>() {}, ret, 
+                    false, null, streamRequest, connectionReadTimeOut, 
+	                this, allowInsecureHttp, user, password, authServiceUrl, 
+	                trustAllCerts, null);
+            url = new URL((String)serviceState.get(0).get("url"));
+	    } else {
+	        url = serviceUrl;
+	    }
+	    try {
+	        return jsonrpcCallStatic(url, method, arg, cls, ret, authRequired, 
+	                context, streamRequest, connectionReadTimeOut, 
+	                this, allowInsecureHttp, user, password, authServiceUrl, 
+	                trustAllCerts, fileForNextRpcResponse);
+	    } finally {
+            fileForNextRpcResponse = null;
+	    }
+	}
+	
+	private static <ARG, RET> RET jsonrpcCallStatic(URL serviceUrl, String method, ARG arg, 
+	        TypeReference<RET> cls, boolean ret, boolean authRequired, RpcContext context, 
+	        boolean streamRequest, Integer connectionReadTimeOut, 
+	        JsonClientCaller accessTokenHolder, boolean allowInsecureHttp, String user, 
+	        char[] password, URL authServiceUrl, boolean trustAllCerts, 
+	        File fileForNextRpcResponse) throws IOException, JsonClientException {
+		HttpURLConnection conn = setupCall(serviceUrl, authRequired, connectionReadTimeOut, 
+		        accessTokenHolder, allowInsecureHttp, user, password, authServiceUrl, 
+		        trustAllCerts);
 		String id = ("" + Math.random()).replace(".", "");
 		if (streamRequest) {
 			// Calculate content-length before
@@ -286,7 +348,7 @@ public class JsonClientCaller {
 			conn.setFixedLengthStreamingMode(size);
 		}
 		// Write real data into http output stream
-		writeRequestData(method, arg, conn.getOutputStream(), id, context);
+		writeRequestDataStatic(method, arg, conn.getOutputStream(), id, context);
 		// Read response
 		int code = conn.getResponseCode();
 		conn.getResponseMessage();
@@ -380,7 +442,6 @@ public class JsonClientCaller {
 					throw new ServerException("An unknown server error occured", 0, "Unknown", null);
 				}
 			} finally {
-				fileForNextRpcResponse = null;
 				if (fos != null)
 					try {
 						fos.close();
@@ -389,7 +450,7 @@ public class JsonClientCaller {
 		}
 	}
 
-	private <ARG> long calculateResponseLength(String method, ARG arg,
+	private static <ARG> long calculateResponseLength(String method, ARG arg,
 			String id, RpcContext context) throws IOException {
 		final long[] sizeWrapper = new long[] {0};
 		OutputStream os = new OutputStream() {
@@ -400,7 +461,7 @@ public class JsonClientCaller {
 			@Override
 			public void write(byte[] b, int o, int l) {sizeWrapper[0] += l;}
 		};
-		writeRequestData(method, arg, os, id, context);
+		writeRequestDataStatic(method, arg, os, id, context);
 		return sizeWrapper[0];
 	}
 
@@ -422,6 +483,11 @@ public class JsonClientCaller {
 		
 	public void writeRequestData(String method, Object arg, OutputStream os, String id, RpcContext context) 
 			throws IOException {
+	    writeRequestDataStatic(method, arg, os, id, context);
+	}
+	
+	private static void writeRequestDataStatic(String method, Object arg, OutputStream os, String id, 
+	        RpcContext context) throws IOException {
 		JsonGenerator g = mapper.getFactory().createGenerator(os, JsonEncoding.UTF8);
 		g.writeStartObject();
 		g.writeObjectField("params", arg);
