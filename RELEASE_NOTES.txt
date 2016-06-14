@@ -4,6 +4,20 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+
+VERSION: 0.0.17 (Released 6/14/2016)
+--------------------------------------
+
+NEW FEATURES:
+- None
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- Support for dynamic Java client URL lookup is added to JsonClientCaller
+
+ANTICIPATED FUTURE DEVELOPMENTS:
+- None
+
+
 VERSION: 0.0.16 (Released 6/13/2016)
 --------------------------------------
 
@@ -19,6 +33,7 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
 
+
 VERSION: 0.0.15 (Released 1/24/2015)
 --------------------------------------
 
@@ -31,6 +46,7 @@ UPDATED FEATURES / MAJOR BUG FIXES:
 
 ANTICIPATED FUTURE DEVELOPMENTS:
 - None
+
 
 VERSION: 0.0.14 (Released 1/4/2015)
 --------------------------------------
