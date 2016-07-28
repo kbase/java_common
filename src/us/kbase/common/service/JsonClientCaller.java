@@ -227,7 +227,8 @@ public class JsonClientCaller {
 				}
 				accessTokenHolder.accessToken = requestTokenFromKBase(user, password, authServiceUrl);
 			}
-			conn.setRequestProperty("Authorization", accessTokenHolder.accessToken.toString());
+			conn.setRequestProperty("Authorization",
+					accessTokenHolder.accessToken.getToken());
 		}
 		if (conn instanceof HttpsURLConnection && trustAllCerts) {
 			final HttpsURLConnection hc = (HttpsURLConnection) conn;
