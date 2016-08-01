@@ -5,7 +5,6 @@ import us.kbase.auth.AuthException;
 import us.kbase.auth.AuthService;
 import us.kbase.auth.AuthToken;
 import us.kbase.auth.ConfigurableAuthService;
-import us.kbase.auth.TokenExpiredException;
 
 import java.net.*;
 import java.nio.charset.Charset;
@@ -87,26 +86,27 @@ public class JsonClientCaller {
 	
 	public JsonClientCaller(URL url, AuthToken accessToken, URL authServiceUrl) throws UnauthorizedException, IOException {
 		this(url, authServiceUrl);
-		this.accessToken = accessToken;
+		final AuthToken validToken;
 		try {
-		    boolean validToken;
-		    if (authServiceUrl == null) {
-		        validToken = AuthService.validateToken(accessToken);
-		    } else {
-		        try {
-		            validToken = new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
-		                    authServiceUrl)).validateToken(accessToken);
-		        } catch (URISyntaxException use) {
-		            throw new UnauthorizedException(
-		                    "Could not contact AuthService url (" + authServiceUrl + 
-		                    ") to validate user token: " + use.getMessage(), use);
-		        }
-		    }
-	        if (!validToken)
-	            throw new UnauthorizedException("Token validation failed");
-		} catch (TokenExpiredException ex) {
+			if (authServiceUrl == null) {
+				validToken = AuthService.validateToken(accessToken.getToken());
+			} else {
+				try {
+					validToken = new ConfigurableAuthService(
+							new AuthConfig().withKBaseAuthServerURL(
+							authServiceUrl)).validateToken(
+									accessToken.getToken());
+				} catch (URISyntaxException use) {
+					throw new UnauthorizedException(
+							"Could not contact AuthService at url (" +
+							authServiceUrl + ") to validate user token: " +
+							use.getMessage(), use);
+				}
+			}
+		} catch (AuthException ex) {
 			throw new UnauthorizedException("Token validation failed", ex);
 		}
+		this.accessToken = validToken;
 	}
 
 	public JsonClientCaller(URL url, String user, String password) throws UnauthorizedException, IOException {
@@ -215,7 +215,7 @@ public class JsonClientCaller {
 						"be called through unsecured http, use https instead or call " +
 						"setAuthAllowedForHttp(true) for your client");
 			}
-			if (accessTokenHolder.accessToken == null || accessTokenHolder.accessToken.isExpired()) {
+			if (accessTokenHolder.accessToken == null) {
 				if (user == null) {
 					if (accessTokenHolder.accessToken == null) {
 						throw new UnauthorizedException("RPC method requires authentication but neither " +
@@ -227,7 +227,8 @@ public class JsonClientCaller {
 				}
 				accessTokenHolder.accessToken = requestTokenFromKBase(user, password, authServiceUrl);
 			}
-			conn.setRequestProperty("Authorization", accessTokenHolder.accessToken.toString());
+			conn.setRequestProperty("Authorization",
+					accessTokenHolder.accessToken.getToken());
 		}
 		if (conn instanceof HttpsURLConnection && trustAllCerts) {
 			final HttpsURLConnection hc = (HttpsURLConnection) conn;

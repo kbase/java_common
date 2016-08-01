@@ -101,7 +101,7 @@ public class JsonTokenStreamTest {
 	}
 	
 	@Test
-	public void emtpyData() throws Exception {
+	public void emptyData() throws Exception {
 		failInitJTS("", "Data must be at least 1 byte / char");
 		failInitJTS(new byte[0], "Data must be at least 1 byte / char");
 		File f = File.createTempFile("TestJsonTokenStream-", ".tmp");
@@ -115,8 +115,7 @@ public class JsonTokenStreamTest {
 	}
 	
 	private void failInitJTS(Object data, String exception) throws Exception {
-		try {
-			new JsonTokenStream(data);
+		try (final JsonTokenStream jts = new JsonTokenStream(data)) {
 			fail("Inited JTS with bad data");
 		} catch (IllegalArgumentException e) {
 			assertThat("correct exception message", e.getLocalizedMessage(),
