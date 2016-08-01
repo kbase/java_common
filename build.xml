@@ -79,7 +79,7 @@
   <target name="compile" depends="init, definejarfile" description="compile the source">
     <!-- Compile class files-->
     <javac destdir="${classes}" includeantruntime="false"
-      debug="true" classpathref="compile.classpath">
+      debug="true" classpathref="compile.classpath" target="1.7" source="1.7">
       <src path="${src}"/>
       <exclude name="us/kbase/common/performance/**"/>
     </javac>
