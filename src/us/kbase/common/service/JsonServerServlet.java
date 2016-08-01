@@ -520,7 +520,7 @@ public class JsonServerServlet extends HttpServlet {
 						try {
 							userProfile = validateToken(token, config.get(CONFIG_AUTH_SERVICE_URL_PARAM));
 							if (userProfile != null)
-								info.setUser(userProfile.getClientId());
+								info.setUser(userProfile.getUserName());
 						} catch (Throwable ex) {
 							writeError(response, -32400, "Token validation failed: " + ex.getMessage(), ex, output);
 							return;
@@ -599,7 +599,7 @@ public class JsonServerServlet extends HttpServlet {
 				try {
 					userProfile = validateToken(token, config.get(CONFIG_AUTH_SERVICE_URL_PARAM));
 					if (userProfile != null)
-						info.setUser(userProfile.getClientId());
+						info.setUser(userProfile.getUserName());
 				} catch (Throwable ex) {
 					writeError(response, -32400, "Token validation failed: " + ex.getMessage(), ex, output);
 					return;
@@ -725,14 +725,13 @@ public class JsonServerServlet extends HttpServlet {
 		if (token == null)
 			throw new AuthException(
 					"Authorization is required for this method but no credentials were provided");
-		final AuthToken ret = new AuthToken(token);
-		final boolean validToken;
+		final AuthToken validToken;
 		try {
 			if (authUrl == null) {
-				validToken = AuthService.validateToken(ret);
+				validToken = AuthService.validateToken(token);
 			} else {
 				validToken = new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
-						new URL(authUrl))).validateToken(ret);
+						new URL(authUrl))).validateToken(token);
 			}
 		} catch (UnknownHostException uhe) {
 			//message from UHE is only the host name
@@ -744,10 +743,7 @@ public class JsonServerServlet extends HttpServlet {
 					"Could not contact Authorization Service url (" + (authUrl == null ? "default" : 
 						authUrl) + ") to validate user token: " + use.getMessage(), use);
 		}
-		if (!validToken) {
-			throw new AuthException("User token was invalid");
-		}
-		return ret;
+		return validToken;
 	}
 
 	public static AuthUser getUserProfile(AuthToken token, String authUrl)
