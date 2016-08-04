@@ -37,21 +37,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public class JsonClientCaller {
 
-	public final URL serviceUrl;
-	private static final ObjectMapper mapper = new ObjectMapper().registerModule(
-	        new JacksonTupleModule());;
-	private String user = null;
-	private char[] password = null;
-	private AuthToken accessToken = null;
+	final public URL serviceUrl;
+	final private static ObjectMapper mapper = new ObjectMapper()
+			.registerModule(new JacksonTupleModule());
+	final private AuthToken accessToken ;
 	private boolean allowInsecureHttp = false;
 	private boolean trustAllCerts = false;
 	private boolean streamRequest = false;
 	private Integer connectionReadTimeOut = 30 * 60 * 1000;
 	private File fileForNextRpcResponse = null;
-    private boolean isDynamic = false;
-    
-	private final URL authServiceUrl;
-	
+	private boolean isDynamic = false;
+
 	private static TrustManager[] GULLIBLE_TRUST_MGR = new TrustManager[] {
 		new X509TrustManager() {
 			public X509Certificate[] getAcceptedIssuers() {
@@ -70,54 +66,48 @@ public class JsonClientCaller {
 				return true;
 			}
 	};
-	
-    public JsonClientCaller(URL url) {
-        this(url, (URL)null);
-    }
-    
-	public JsonClientCaller(URL url, URL authServiceUrl) {
-		serviceUrl = url;
-		this.authServiceUrl = authServiceUrl;
-	}
 
-	public JsonClientCaller(URL url, AuthToken accessToken) throws UnauthorizedException, IOException {
-	    this(url, accessToken, null);
-	}
-	
-	public JsonClientCaller(URL url, AuthToken accessToken, URL authServiceUrl) throws UnauthorizedException, IOException {
-		this(url, authServiceUrl);
-		final AuthToken validToken;
-		try {
-			if (authServiceUrl == null) {
-				validToken = AuthService.validateToken(accessToken.getToken());
-			} else {
-				try {
-					validToken = new ConfigurableAuthService(
-							new AuthConfig().withKBaseAuthServerURL(
-							authServiceUrl)).validateToken(
-									accessToken.getToken());
-				} catch (URISyntaxException use) {
-					throw new UnauthorizedException(
-							"Could not contact AuthService at url (" +
-							authServiceUrl + ") to validate user token: " +
-							use.getMessage(), use);
-				}
-			}
-		} catch (AuthException ex) {
-			throw new UnauthorizedException("Token validation failed", ex);
+	public JsonClientCaller(final URL url) {
+		if (url == null) {
+			throw new NullPointerException("url");
 		}
-		this.accessToken = validToken;
+		serviceUrl = url;
+		accessToken = null;
 	}
 
-	public JsonClientCaller(URL url, String user, String password) throws UnauthorizedException, IOException {
-	    this(url, user, password, null);
+	public JsonClientCaller(
+			final URL url,
+			final AuthToken token)
+			throws UnauthorizedException, IOException {
+		if (url == null) {
+			throw new NullPointerException("url");
+		}
+		if (token == null) {
+			throw new NullPointerException("token");
+		}
+		this.serviceUrl = url;
+		this.accessToken = token;
+	}
+
+	public JsonClientCaller(
+			final URL url,
+			final String user,
+			final String password)
+			throws UnauthorizedException, IOException {
+		this(url, user, password, null);
 	}
 	
-	public JsonClientCaller(URL url, String user, String password, URL authServiceUrl) throws UnauthorizedException, IOException {
-		this(url, authServiceUrl);
-		this.user = user;
-		this.password = password.toCharArray();
-		accessToken = requestTokenFromKBase(user, this.password, authServiceUrl);
+	public JsonClientCaller(
+			final URL url,
+			final String user,
+			final String password,
+			final URL authServiceUrl)
+			throws UnauthorizedException, IOException {
+		if (url == null) {
+			throw new NullPointerException("url");
+		}
+		serviceUrl = url;
+		accessToken = requestTokenFromKBase(user, password, authServiceUrl);
 	}
 	
 	/** Determine whether this client allows insecure http connections
@@ -198,11 +188,16 @@ public class JsonClientCaller {
         this.isDynamic = isDynamic;
     }
 	
-	private static HttpURLConnection setupCall(URL serviceUrl, boolean authRequired, 
-	        Integer connectionReadTimeOut, JsonClientCaller accessTokenHolder, 
-	        boolean allowInsecureHttp, String user, char[] password, URL authServiceUrl, 
-	        boolean trustAllCerts) throws IOException, JsonClientException {
-		HttpURLConnection conn = (HttpURLConnection) serviceUrl.openConnection();
+	private static HttpURLConnection setupCall(
+			final URL serviceUrl,
+			final boolean authRequired, 
+			final Integer connectionReadTimeOut,
+			final JsonClientCaller accessTokenHolder, 
+			final boolean allowInsecureHttp,
+			final boolean trustAllCerts)
+			throws IOException, JsonClientException {
+		final HttpURLConnection conn =
+				(HttpURLConnection) serviceUrl.openConnection();
 		conn.setConnectTimeout(10000);
 		if (connectionReadTimeOut != null) {
 			conn.setReadTimeout(connectionReadTimeOut);
@@ -211,21 +206,16 @@ public class JsonClientCaller {
 		conn.setRequestMethod("POST");
 		if (authRequired || accessTokenHolder.accessToken != null) {
 			if (!(conn instanceof HttpsURLConnection || allowInsecureHttp)) {
-				throw new UnauthorizedException("RPC method required authentication shouldn't " +
-						"be called through unsecured http, use https instead or call " +
-						"setAuthAllowedForHttp(true) for your client");
+				throw new UnauthorizedException(
+						"RPC method requiring authentication shouldn't " +
+						"be called through unsecured http, use https " +
+						"instead or call setAuthAllowedForHttp(true) for " +
+						"your client");
 			}
 			if (accessTokenHolder.accessToken == null) {
-				if (user == null) {
-					if (accessTokenHolder.accessToken == null) {
-						throw new UnauthorizedException("RPC method requires authentication but neither " +
-								"user nor token was set");
-					} else {
-						throw new UnauthorizedException("Token is expired and can not be reloaded " +
-								"because user wasn't set");
-					}
-				}
-				accessTokenHolder.accessToken = requestTokenFromKBase(user, password, authServiceUrl);
+					throw new UnauthorizedException(
+							"RPC method requires authentication but " +
+							"credentials were not provided");
 			}
 			conn.setRequestProperty("Authorization",
 					accessTokenHolder.accessToken.getToken());
@@ -251,26 +241,40 @@ public class JsonClientCaller {
 		return conn;
 	}
 
-	public static AuthToken requestTokenFromKBase(String user, char[] password) 
-	        throws UnauthorizedException, IOException {
-	    return requestTokenFromKBase(user, password, null);
+	public static AuthToken requestTokenFromKBase(
+			final String user,
+			final String password) 
+			throws UnauthorizedException, IOException {
+		return requestTokenFromKBase(user, password, null);
 	}
 
-	public static AuthToken requestTokenFromKBase(String user, char[] password, 
-	        URL authServiceUrl) throws UnauthorizedException, IOException {
+	public static AuthToken requestTokenFromKBase(
+			final String user,
+			final String password, 
+			final URL authServiceUrl)
+			throws UnauthorizedException, IOException {
+		if (user == null || user.isEmpty()) {
+			throw new IllegalArgumentException("user cannot be null or empty");
+		}
+		if (password == null || password.isEmpty()) {
+			throw new IllegalArgumentException(
+					"password cannot be null or empty");
+		}
 		try {
-	         if (authServiceUrl == null) {
-	             return AuthService.login(user, new String(password)).getToken();
-	         } else {
-	             try {
-	                 return new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
-	                         authServiceUrl)).login(user, new String(password)).getToken();
-	             } catch (URISyntaxException use) {
-	                 throw new UnauthorizedException(
-	                         "Could not contact AuthService url (" + authServiceUrl + 
-	                         ") to get user token: " + use.getMessage(), use);
-	             }
-	         }
+			if (authServiceUrl == null) {
+				return AuthService.login(user, password).getToken();
+			} else {
+				try {
+					return new ConfigurableAuthService(new AuthConfig()
+							.withKBaseAuthServerURL(authServiceUrl))
+							.login(user, password).getToken();
+				} catch (URISyntaxException use) {
+					throw new UnauthorizedException(
+							"Could not contact AuthService url (" +
+							authServiceUrl + ") to get user token: " +
+									use.getMessage(), use);
+				}
+			}
 		} catch (AuthException ex) {
 			throw new UnauthorizedException("Could not authenticate user", ex);
 		}
@@ -316,8 +320,7 @@ public class JsonClientCaller {
                     "ServiceWizard.get_service_status", serviceStatusArgs, 
                     new TypeReference<List<Map<String, Object>>>() {}, ret, 
                     false, null, streamRequest, connectionReadTimeOut, 
-	                this, allowInsecureHttp, user, password, authServiceUrl, 
-	                trustAllCerts, null);
+	                this, allowInsecureHttp, trustAllCerts, null);
             url = new URL((String)serviceState.get(0).get("url"));
 	    } else {
 	        url = serviceUrl;
@@ -325,22 +328,30 @@ public class JsonClientCaller {
 	    try {
 	        return jsonrpcCallStatic(url, method, arg, cls, ret, authRequired, 
 	                context, streamRequest, connectionReadTimeOut, 
-	                this, allowInsecureHttp, user, password, authServiceUrl, 
-	                trustAllCerts, fileForNextRpcResponse);
+	                this, allowInsecureHttp, trustAllCerts,
+	                fileForNextRpcResponse);
 	    } finally {
             fileForNextRpcResponse = null;
 	    }
 	}
 	
-	private static <ARG, RET> RET jsonrpcCallStatic(URL serviceUrl, String method, ARG arg, 
-	        TypeReference<RET> cls, boolean ret, boolean authRequired, RpcContext context, 
-	        boolean streamRequest, Integer connectionReadTimeOut, 
-	        JsonClientCaller accessTokenHolder, boolean allowInsecureHttp, String user, 
-	        char[] password, URL authServiceUrl, boolean trustAllCerts, 
-	        File fileForNextRpcResponse) throws IOException, JsonClientException {
+	private static <ARG, RET> RET jsonrpcCallStatic(
+			final URL serviceUrl,
+			final String method,
+			final ARG arg,
+			final TypeReference<RET> cls,
+			final boolean ret,
+			final boolean authRequired,
+			final RpcContext context,
+			final boolean streamRequest,
+			final Integer connectionReadTimeOut,
+			final JsonClientCaller accessTokenHolder,
+			final boolean allowInsecureHttp,
+			final boolean trustAllCerts,
+			final File fileForNextRpcResponse)
+			throws IOException, JsonClientException {
 		HttpURLConnection conn = setupCall(serviceUrl, authRequired, connectionReadTimeOut, 
-		        accessTokenHolder, allowInsecureHttp, user, password, authServiceUrl, 
-		        trustAllCerts);
+				accessTokenHolder, allowInsecureHttp, trustAllCerts);
 		String id = ("" + Math.random()).replace(".", "");
 		if (streamRequest) {
 			// Calculate content-length before
@@ -401,8 +412,10 @@ public class JsonClientCaller {
 						new Integer(retError.get("code")), retError.get("name"),
 						data);
 			}
-			if (res == null && ret)
-				throw new ServerException("An unknown server error occured", 0, "Unknown", null);
+			if (res == null && ret) {
+				throw new ServerException("An unknown server error occured",
+						0, "Unknown", null);
+			}
 			return res;
 		} else {
 			FileOutputStream fos = null;
