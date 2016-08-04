@@ -4,6 +4,18 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.0.19 (Released 8/3/2016)
+--------------------------------------
+
+NEW FEATURES:
+- None
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- Java clients no longer validate a token before making a call.
+
+ANTICIPATED FUTURE DEVELOPMENTS:
+- None
+
 VERSION: 0.0.18 (Released 7/31/2016)
 --------------------------------------
 
