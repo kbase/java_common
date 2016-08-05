@@ -1,6 +1,7 @@
 package us.kbase.common.service;
 
 import us.kbase.auth.AuthConfig;
+import us.kbase.auth.AuthException;
 import us.kbase.auth.AuthToken;
 import us.kbase.auth.ConfigurableAuthService;
 
@@ -544,7 +545,7 @@ public class JsonServerServlet extends HttpServlet {
 				if (rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].equals(AuthToken.class)) {
 					if (token != null || !rpcMethod.getAnnotation(JsonServerMethod.class).authOptional()) {
 						try {
-							userProfile = auth.validateToken(token);
+							userProfile = validateToken(token);
 							if (userProfile != null)
 								info.setUser(userProfile.getUserName());
 						} catch (Throwable ex) {
@@ -623,7 +624,7 @@ public class JsonServerServlet extends HttpServlet {
 					return;
 				}
 				try {
-					userProfile = auth.validateToken(token);
+					userProfile = validateToken(token);
 					if (userProfile != null)
 						info.setUser(userProfile.getUserName());
 				} catch (Throwable ex) {
@@ -676,6 +677,16 @@ public class JsonServerServlet extends HttpServlet {
 		}
 	}
 
+	private AuthToken validateToken(final String token)
+			throws AuthException, IOException {
+		if (token == null || token.isEmpty()) {
+			throw new AuthException(
+					"Authorization is required for this method but no " +
+					"credentials were provided");
+		}
+		return auth.validateToken(token);
+	}
+	
 	protected void logHeaders(final String xFF) {
 		if (xFF != null && !xFF.isEmpty()) {
 			sysLogger.log(LOG_LEVEL_INFO, getClass().getName(),
