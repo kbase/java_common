@@ -4,6 +4,22 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.0.20 (Released 8/5/2016)
+--------------------------------------
+
+NEW FEATURES:
+- None
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- Java servers now instantiate an auth client once on startup rather than
+  every call (if an auth url is provided in the config). This prevents an
+  extra call to the auth service for every server call.
+  
+
+ANTICIPATED FUTURE DEVELOPMENTS:
+- None
+
+
 VERSION: 0.0.19 (Released 8/3/2016)
 --------------------------------------
 

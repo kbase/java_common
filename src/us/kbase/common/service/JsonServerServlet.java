@@ -1,10 +1,7 @@
 package us.kbase.common.service;
 
-import us.kbase.auth.AuthException;
 import us.kbase.auth.AuthConfig;
-import us.kbase.auth.AuthService;
 import us.kbase.auth.AuthToken;
-import us.kbase.auth.AuthUser;
 import us.kbase.auth.ConfigurableAuthService;
 
 import java.io.BufferedOutputStream;
@@ -21,9 +18,9 @@ import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -84,6 +81,7 @@ public class JsonServerServlet extends HttpServlet {
 	private static final String CONFIG_AUTH_SERVICE_URL_PARAM = "auth-service-url";
 	private static final String KB_JOB_SERVICE_URL = "KB_JOB_SERVICE_URL";
 	private static final String CONFIG_JOB_SERVICE_URL_PARAM = "job-service-url";
+	private final ConfigurableAuthService auth;
 	protected Map<String, String> config = new HashMap<String, String>();
 	private Server jettyServer = null;
 	private Integer jettyPort = null;
@@ -169,6 +167,33 @@ public class JsonServerServlet extends HttpServlet {
 				KB_DEP, LOG_LEVEL_INFO, false);
 		userLogger = new JsonServerSyslog(sysLogger, true);
 		config = getConfig(specServiceName, sysLogger);
+		auth = getAuth(config);
+		
+	}
+	
+	private ConfigurableAuthService getAuth(final Map<String, String> config) {
+		final String authURL = config.get(CONFIG_AUTH_SERVICE_URL_PARAM);
+		final AuthConfig c;
+		if (authURL == null || authURL.isEmpty()) {
+			c = new AuthConfig();
+		} else {
+			try {
+				c = new AuthConfig().withKBaseAuthServerURL(new URL(authURL));
+			} catch (URISyntaxException | MalformedURLException e) {
+				startupFailed();
+				sysLogger.logErr(String.format(
+						"Authentication url %s is invalid", authURL));
+				return null;
+			}
+		}
+		try {
+			return new ConfigurableAuthService(c);
+		} catch (IOException e) {
+			startupFailed();
+			sysLogger.logErr("Couldn't connect to authentication service at " +
+					c.getAuthServerURL() + " : " + e.getLocalizedMessage());
+			return null;
+		}
 	}
 	
 	/**
@@ -364,6 +389,7 @@ public class JsonServerServlet extends HttpServlet {
 					if (maxRPCPackageSize != null && rpcSize > maxRPCPackageSize) {
 						writeError(respStatus, -32700, "Object is too big, length is more than " + maxRPCPackageSize + " bytes", output);
 						os.close();
+						input.close();
 						return;
 					}
 				}
@@ -518,7 +544,7 @@ public class JsonServerServlet extends HttpServlet {
 				if (rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].equals(AuthToken.class)) {
 					if (token != null || !rpcMethod.getAnnotation(JsonServerMethod.class).authOptional()) {
 						try {
-							userProfile = validateToken(token, config.get(CONFIG_AUTH_SERVICE_URL_PARAM));
+							userProfile = auth.validateToken(token);
 							if (userProfile != null)
 								info.setUser(userProfile.getUserName());
 						} catch (Throwable ex) {
@@ -597,7 +623,7 @@ public class JsonServerServlet extends HttpServlet {
 					return;
 				}
 				try {
-					userProfile = validateToken(token, config.get(CONFIG_AUTH_SERVICE_URL_PARAM));
+					userProfile = auth.validateToken(token);
 					if (userProfile != null)
 						info.setUser(userProfile.getUserName());
 				} catch (Throwable ex) {
@@ -720,48 +746,6 @@ public class JsonServerServlet extends HttpServlet {
 		this.maxRPCPackageSize = maxRPCPackageSize;
 	}
 	
-	protected static AuthToken validateToken(String token, String authUrl)
-			throws AuthException, IOException {
-		if (token == null)
-			throw new AuthException(
-					"Authorization is required for this method but no credentials were provided");
-		final AuthToken validToken;
-		try {
-			if (authUrl == null) {
-				validToken = AuthService.validateToken(token);
-			} else {
-				validToken = new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
-						new URL(authUrl))).validateToken(token);
-			}
-		} catch (UnknownHostException uhe) {
-			//message from UHE is only the host name
-			throw new AuthException(
-					"Could not contact Authorization Service host to validate user token: " + 
-							uhe.getMessage(), uhe);
-		} catch (URISyntaxException use) {
-			throw new AuthException(
-					"Could not contact Authorization Service url (" + (authUrl == null ? "default" : 
-						authUrl) + ") to validate user token: " + use.getMessage(), use);
-		}
-		return validToken;
-	}
-
-	public static AuthUser getUserProfile(AuthToken token, String authUrl)
-			throws IOException, AuthException {
-		if (authUrl == null) {
-			return AuthService.getUserFromToken(token);
-		} else {
-			try {
-				return new ConfigurableAuthService(new AuthConfig().withKBaseAuthServerURL(
-						new URL(authUrl))).getUserFromToken(token);
-			} catch (URISyntaxException use) {
-				throw new AuthException(
-						"Could not contact Authorization Service url (" + (authUrl == null ? "default" : 
-							authUrl) + ") to get user profile: " + use.getMessage(), use);
-			}
-		}
-	}
-
 	protected void writeError(ResponseStatusSetter response, int code, String message, OutputStream output) {
 		writeError(response, code, message, null, output);
 	}
