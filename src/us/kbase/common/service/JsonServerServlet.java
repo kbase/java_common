@@ -79,7 +79,11 @@ public class JsonServerServlet extends HttpServlet {
 	 * the server name.
 	 */
 	public static final String KB_SERVNAME = "KB_SERVICE_NAME";
-	private static final String CONFIG_AUTH_SERVICE_URL_PARAM = "auth-service-url";
+	private static final String CONFIG_AUTH_SERVICE_URL_PARAM =
+			"auth-service-url";
+	//set to 'true' for true, anything else for false.
+	private static final String CONFIG_AUTH_SERVICE_ALLOW_INSECURE_URL_PARAM =
+			"auth-service-url-allow-insecure";
 	private static final String KB_JOB_SERVICE_URL = "KB_JOB_SERVICE_URL";
 	private static final String CONFIG_JOB_SERVICE_URL_PARAM = "job-service-url";
 	private final ConfigurableAuthService auth;
@@ -174,12 +178,14 @@ public class JsonServerServlet extends HttpServlet {
 	
 	private ConfigurableAuthService getAuth(final Map<String, String> config) {
 		final String authURL = config.get(CONFIG_AUTH_SERVICE_URL_PARAM);
-		final AuthConfig c;
-		if (authURL == null || authURL.isEmpty()) {
-			c = new AuthConfig();
-		} else {
+		final AuthConfig c = new AuthConfig();
+		if (authURL != null && !authURL.isEmpty()) {
+			if (STRING_TRUE.equals(config.get(
+					CONFIG_AUTH_SERVICE_ALLOW_INSECURE_URL_PARAM))) {
+				c.withAllowInsecureURLs(true);
+			}
 			try {
-				c = new AuthConfig().withKBaseAuthServerURL(new URL(authURL));
+				c.withKBaseAuthServerURL(new URL(authURL));
 			} catch (URISyntaxException | MalformedURLException e) {
 				startupFailed();
 				sysLogger.logErr(String.format(
