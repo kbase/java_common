@@ -2,8 +2,8 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/http/httpclient-4.3.1.jar" sourcepath="/home/crusherofheads/Downloads/httpclient-4.3.1-sources.jar"/>
-	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/http/httpcore-4.3.jar" sourcepath="/home/crusherofheads/Downloads/httpcore-4.3-sources.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/http/httpclient-4.3.1.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/http/httpcore-4.3.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/http/httpmime-4.3.1.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-io-2.4.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-lang3-3.1.jar"/>
