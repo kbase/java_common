@@ -4,6 +4,14 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.0.22 (Released 9/15/2016)
+--------------------------------------
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- Fixed a bug that would throw an IllegalStateError when configuration of the
+  authentication client in JsonServerServlet failed rather than logging the
+  error.
+
 VERSION: 0.0.21 (Released 8/26/2016)
 --------------------------------------
 
