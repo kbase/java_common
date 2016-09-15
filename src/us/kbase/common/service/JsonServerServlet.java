@@ -188,8 +188,9 @@ public class JsonServerServlet extends HttpServlet {
 				c.withKBaseAuthServerURL(new URL(authURL));
 			} catch (URISyntaxException | MalformedURLException e) {
 				startupFailed();
-				sysLogger.logErr(String.format(
-						"Authentication url %s is invalid", authURL));
+				sysLogger.log(LOG_LEVEL_ERR, getClass().getName(),
+						String.format(
+								"Authentication url %s is invalid", authURL));
 				return null;
 			}
 		}
@@ -197,7 +198,8 @@ public class JsonServerServlet extends HttpServlet {
 			return new ConfigurableAuthService(c);
 		} catch (IOException e) {
 			startupFailed();
-			sysLogger.logErr("Couldn't connect to authentication service at " +
+			sysLogger.log(LOG_LEVEL_ERR, getClass().getName(),
+					"Couldn't connect to authentication service at " +
 					c.getAuthServerURL() + " : " + e.getLocalizedMessage());
 			return null;
 		}
