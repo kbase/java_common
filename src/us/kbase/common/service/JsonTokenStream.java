@@ -114,6 +114,8 @@ public class JsonTokenStream extends JsonParser {
 
 	}
 	
+	//TODO add a method like InputStream getInputStream() that otherwise behaves like writeJson()
+	
 	/**
 	 * Create token stream for data source of one of the following types: File, String, byte[], JsonNode.
 	 * @param data
