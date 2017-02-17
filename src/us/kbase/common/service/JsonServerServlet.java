@@ -176,12 +176,19 @@ public class JsonServerServlet extends HttpServlet {
 		
 	}
 	
-	private ConfigurableAuthService getAuth(final Map<String, String> config) {
-		final String authURL = config.get(CONFIG_AUTH_SERVICE_URL_PARAM);
+	protected String getAuthUrlFromConfig(final Map<String, String> config) {
+        return config.get(CONFIG_AUTH_SERVICE_URL_PARAM);
+	}
+	
+	protected String getAuthAllowInsecureFromConfig(final Map<String, String> config) {
+	    return config.get(CONFIG_AUTH_SERVICE_ALLOW_INSECURE_URL_PARAM);
+	}
+	
+	protected ConfigurableAuthService getAuth(final Map<String, String> config) {
+		final String authURL = getAuthUrlFromConfig(config);
 		final AuthConfig c = new AuthConfig();
 		if (authURL != null && !authURL.isEmpty()) {
-			if (STRING_TRUE.equals(config.get(
-					CONFIG_AUTH_SERVICE_ALLOW_INSECURE_URL_PARAM))) {
+			if (STRING_TRUE.equals(getAuthAllowInsecureFromConfig(config))) {
 				c.withAllowInsecureURLs(true);
 			}
 			try {
@@ -685,7 +692,7 @@ public class JsonServerServlet extends HttpServlet {
 		}
 	}
 
-	private AuthToken validateToken(final String token)
+	protected AuthToken validateToken(final String token)
 			throws AuthException, IOException {
 		if (token == null || token.isEmpty()) {
 			throw new AuthException(
