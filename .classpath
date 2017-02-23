@@ -13,7 +13,6 @@
 	<classpathentry kind="lib" path="/jars/lib/jars/jackson/jackson-core-2.2.3.jar" sourcepath="/jars/lib/jars/jackson/jackson-core-2.2.3-sources.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/jackson/jackson-databind-2.2.3.jar" sourcepath="/jars/lib/jars/jackson/jackson-databind-2.2.3-sources.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/junit/junit-4.9.jar"/>
-	<classpathentry kind="lib" path="/jars/lib/jars/mongo/mongo-java-driver-2.11.2.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/mongo/mongo-java-driver-2.13.3.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/derby/derby-10.10.1.1.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/easymock/easymock-3.2.jar"/>
