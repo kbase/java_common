@@ -4,6 +4,22 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.0.24 (Release 5/25/2017)
+-----------------------------------
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- The shock controller now accepts and requires an auth url to be used for Globus lookups. This is
+  expected to be https://nexus.api.globusonline.org/ (soon to be deprecated) or 
+  https://(ci.|next.|appdev.|)kbase.us/services/auth/api/legacy/globus.
+
+VERSION: 0.0.23 (Released 2/23/2017)
+--------------------------------------
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- Some private methods in JsonServerServlet are made protected (necessary
+  for coming switch to auth2 in kb-sdk and njs_wrapper).
+- Old code was deleted (custom task queue support, AWE API client).
+
 VERSION: 0.0.22 (Released 9/15/2016)
 --------------------------------------
 

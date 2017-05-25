@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -70,7 +71,8 @@ public class ShockController {
 			final String mongohost,
 			final String shockMongoDBname,
 			final String mongouser,
-			final String mongopwd)
+			final String mongopwd,
+			final URL authurl)
 					throws Exception {
 		tempDir = makeTempDirs(rootTempDir, "ShockController-", TEMP_DIRS);
 		port = findFreePort();
@@ -92,6 +94,7 @@ public class ShockController {
 		context.put("mongouser", mongouser == null ? "" : mongouser);
 		context.put("mongopwd", mongopwd == null ? "" : mongopwd);
 		context.put("shockadmin", adminUser);
+		context.put("authurl", authurl.toString());
 		
 		File shockcfg = tempDir.resolve(SHOCK_CONFIG_FN).toFile();
 		
@@ -203,7 +206,7 @@ public class ShockController {
 				"kbasetest2",
 				"localhost",
 				"delete_shock_db",
-				"foo", "foo");
+				"foo", "foo", new URL("https://foo.com"));
 		System.out.println(ac.getServerPort());
 		Scanner reader = new Scanner(System.in);
 		System.out.println("any char to shut down");
