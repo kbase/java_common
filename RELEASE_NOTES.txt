@@ -4,6 +4,14 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.0.23 (Release 5/25/2017)
+-----------------------------------
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- The shock controller now accepts and requires an auth url to be used for Globus lookups. This is
+  expected to be https://nexus.api.globusonline.org/ (soon to be deprecated) or 
+  https://(ci.|next.|appdev.|)kbase.us/services/auth/api/legacy/globus.
+
 VERSION: 0.0.22 (Released 9/15/2016)
 --------------------------------------
 
