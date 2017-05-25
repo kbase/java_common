@@ -75,10 +75,7 @@ public class JsonClientCaller {
 		accessToken = null;
 	}
 
-	public JsonClientCaller(
-			final URL url,
-			final AuthToken token)
-			throws UnauthorizedException, IOException {
+	public JsonClientCaller(final URL url, final AuthToken token) {
 		if (url == null) {
 			throw new NullPointerException("url");
 		}
