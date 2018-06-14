@@ -47,6 +47,10 @@ This generates the gradle wrapper files.
 
 Run `gradle build` to install dependencies, run tests, and compile. Run `gradle tasks` to see all available commands.
 
+### Building
+
+Run `gradle build` and deploy the file in `build/libs/java-common-X.Y.Z.jar` into the KBase Artifactory.
+
 ### Project anatomy
 
 * **Source code** live in `src/main/java/us/kbase/common`
