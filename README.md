@@ -33,11 +33,7 @@ TODO
 
 ## Development
 
-Make sure [gradle](https://gradle.org/install/) is installed.
-
-Download your `gradle.properties` file by going to [repository browser](http://ci.kbase.us:8081/artifactory/webapp/#/artifacts/browse/tree/General/gradle-dev-local), clicking "Set Me Up" at top right. Place the `gradle.properties` file in the root of the project. It will be gitignored; **do not commit it into the codebase**.
-
-Then run:
+Make sure [gradle](https://gradle.org/install/) is installed. Then run:
 
 ```sh
 $ gradle wrapper
@@ -45,7 +41,7 @@ $ gradle wrapper
 
 This generates the gradle wrapper files.
 
-Run `gradle build` to install dependencies, run tests, and compile. Run `gradle tasks` to see all available commands.
+Run `./gradlew build` to install dependencies, run tests, and compile. Run `gradle tasks` to see all available commands.
 
 ### Building
 
