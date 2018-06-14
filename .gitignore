@@ -1,0 +1,9 @@
+.gradle
+/build/
+/gradle.properties
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+gradlew
+gradlew.bat
+/gradle/

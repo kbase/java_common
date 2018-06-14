@@ -4,6 +4,13 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.1.0 (Release 6/14/2018)
+-----------------------------------
+
+UPDATED FEATURES / MAJOR BUG FIXES:
+- Converted the build and dependency management to Gradle for use on the KBase
+  Artifactory.
+
 VERSION: 0.0.24 (Release 5/25/2017)
 -----------------------------------
 
