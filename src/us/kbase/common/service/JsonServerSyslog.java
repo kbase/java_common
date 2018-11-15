@@ -465,8 +465,13 @@ public class JsonServerSyslog {
 			externalLogFile = null;
 			File file;
 			//System.out.println("Configuration file reloading...");
-			String configPath = System.getProperty(configPathParam) == null ?
-					System.getenv(configPathParam) : System.getProperty(configPathParam);
+			final String configPath;
+			if (configPathParam == null) {
+				configPath = null;
+			} else {
+				configPath = System.getProperty(configPathParam) == null ?
+						System.getenv(configPathParam) : System.getProperty(configPathParam);
+			}
 			if (configPath == null) {
 				return;
 			} else {

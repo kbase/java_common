@@ -11,6 +11,8 @@ VERSION: 0.0.25 (Release 11/15/2018)
   This variable must be set to a parent package of the generated SDK code packages or undefined
   behavior may result. It defaults to `us.kbase`.
 - JsonServerSyslog.findCaller() is now private.
+- It is now permissible to pass null for the `configFileParam` in the JsonServerSyslog
+  constructor. In this case, no logging configuration will be loaded from an external file.
 
 VERSION: 0.0.24 (Release 5/25/2017)
 -----------------------------------

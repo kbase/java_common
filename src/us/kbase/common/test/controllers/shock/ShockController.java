@@ -38,8 +38,6 @@ import us.kbase.common.mongo.GetMongoDB;
  */
 public class ShockController {
 	
-	//TODO share common code with AweController
-	
 	private final static String SHOCK_CONFIG_FN = "shock.cfg";
 	private final static String SHOCK_CONFIG =
 			"us/kbase/common/test/controllers/shock/conf/" +

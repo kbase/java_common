@@ -30,7 +30,8 @@ public class LoggerTest {
 	public void checkLoggerWorks() throws Exception {
 		// this test fails with the env var set
 //		getenv().put("KB_SDK_LOGGER_TARGET_PACKAGE", "testlogger");
-		final JsonServerSyslog l = new JsonServerSyslog("serv", "fake");
+		// test that passing a null config param works
+		final JsonServerSyslog l = new JsonServerSyslog("serv", null);
 		final List<String> logout = new LinkedList<>();
 		
 		l.changeOutput(new SyslogOutput() {
