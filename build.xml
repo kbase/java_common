@@ -129,6 +129,7 @@
       <batchtest todir="${env.JENKINS_REPORT_DIR}">
         <fileset dir="${src}">
           <include name="**/test/**/**Test.java"/>
+          <include name="**/testlogger/**/**Test.java"/>
         </fileset>
       </batchtest>
     </junit>
