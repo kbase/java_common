@@ -38,7 +38,11 @@ public class JsonServerSyslog {
 	private PrintWriter currentWriter = null;
 	private SyslogOutput output = defaultSyslogOutput;
 	private int logLevel = -1;
+	//TODO CODE this should be set via the constructor, but need to pass from compiled code thru JsonServerServlet, so wait for now
+	private String targetPackageName = "us.kbase";
 
+	public static final String ENV_VAR_PACKAGE_NAME = "KB_SDK_LOGGER_TARGET_PACKAGE";
+	
 	public static final int LOG_LEVEL_ERR = SyslogConstants.LEVEL_ERROR;
 	public static final int LOG_LEVEL_INFO = SyslogConstants.LEVEL_INFO;
 	public static final int LOG_LEVEL_DEBUG = SyslogConstants.LEVEL_DEBUG;
@@ -82,10 +86,33 @@ public class JsonServerSyslog {
 		} else {
 			log = null;
 		}
+		this.targetPackageName = getTargetPackageNameInternal();
 		this.config = new Config(configFileParam, serviceName);
 		if (logFromSLF4J) {
 			setUpSLF4JLogger();
 		}
+	}
+	
+	/** Get the package name that will be serviced by this logger. This defaults to us.kbase
+	 * and can be set via the {@link #ENV_VAR_PACKAGE_NAME} environment variable prior to
+	 * logger startup. Setting the package incorrectly can lead to undefined behavior.
+	 * @return the name of the java package (including child packages) that will be 
+	 * serviced by this logger.
+	 */
+	public String getTargetPackageName() {
+		return targetPackageName;
+	}
+	
+	private String getTargetPackageNameInternal() {
+		final String target;
+		final String putative = System.getenv(ENV_VAR_PACKAGE_NAME);
+		if (putative != null && !putative.trim().isEmpty()) {
+			target = putative.trim();
+		} else {
+			target = targetPackageName;
+		}
+		System.out.println("JsonServerSyslog using package name " + target);
+		return target;
 	}
 	
 	/* DO NOT CHANGE THIS METHOD WITHOUT MANUAL TESTING!
@@ -123,8 +150,7 @@ public class JsonServerSyslog {
 	}
 	
 	private void setUpSLF4JLogger() {
-		final Logger kbaseRootLogger = (Logger) LoggerFactory.getLogger(
-				"us.kbase"); //should this be configurable?
+		final Logger kbaseRootLogger = (Logger) LoggerFactory.getLogger(targetPackageName);
 		//would be better to also set the level here on calls to the server
 		//setLogLevel, but meh for now
 		kbaseRootLogger.detachAndStopAllAppenders();
@@ -213,7 +239,6 @@ public class JsonServerSyslog {
 	private void extractErrorLines(Throwable err, boolean isCause, List<String> messages) {
 		StackTraceElement[] st = err.getStackTrace();
 		int firstPos = 0;
-		String packageName = "us.kbase";
 		String className = JsonServerServlet.class.getName();
 		String className2 = JsonServerSyslog.class.getName();
 		for (; firstPos < st.length; firstPos++) {
@@ -225,7 +250,7 @@ public class JsonServerSyslog {
 			firstPos = 0;
 		int lastPos = st.length - 1;
 		for (; lastPos > firstPos; lastPos--) {
-			if (st[lastPos].getClassName().startsWith(packageName) && 
+			if (st[lastPos].getClassName().startsWith(targetPackageName) && 
 					(!st[lastPos].getClassName().equals(className)) &&
 					(!st[lastPos].getClassName().equals(className2)))
 				break;
@@ -253,7 +278,6 @@ public class JsonServerSyslog {
 		final StackTraceElementProxy[] st =
 				err.getStackTraceElementProxyArray();
 		int firstPos;
-		String packageName = "us.kbase"; //configurable?
 		String className = JsonServerServlet.class.getName();
 		String className2 = JsonServerSyslog.class.getName();
 		for (firstPos = 0; firstPos < st.length; firstPos++) {
@@ -270,7 +294,7 @@ public class JsonServerSyslog {
 		for (; lastPos > firstPos; lastPos--) {
 			final String cn = st[lastPos].getStackTraceElement()
 					.getClassName();
-			if (cn.startsWith(packageName) && !cn.equals(className) &&
+			if (cn.startsWith(targetPackageName) && !cn.equals(className) &&
 					!cn.equals(className2)) {
 				break;
 			}
@@ -306,14 +330,13 @@ public class JsonServerSyslog {
 		log(LOG_LEVEL_DEBUG + (debugLevelFrom1to3 - 1), findCaller(), message);
 	}
 
-	public static String findCaller() {
+	private String findCaller() {
 		StackTraceElement[] st = Thread.currentThread().getStackTrace();
-		String packageName = "us.kbase";
 		String className = JsonServerServlet.class.getName();
 		String className2 = JsonServerSyslog.class.getName();
 		for (int pos = 0; pos < st.length; pos++) {
 			if (st[pos].getClassName().equals(className) || st[pos].getClassName().equals(className2) ||
-					!st[pos].getClassName().startsWith(packageName))
+					!st[pos].getClassName().startsWith(targetPackageName))
 				continue;
 			return st[pos].getClassName();
 		}
