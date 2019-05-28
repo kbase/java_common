@@ -357,107 +357,125 @@ public class JsonClientCaller {
 			conn.setFixedLengthStreamingMode(size);
 		}
 		// Write real data into http output stream
-		writeRequestDataStatic(method, arg, conn.getOutputStream(), id, context);
+
+		try {
+			writeRequestDataStatic(method, arg, conn.getOutputStream(), id, context);
+		}
+		finally {
+			conn.getOutputStream().close();
+		}
+
 		// Read response
 		int code = conn.getResponseCode();
 		conn.getResponseMessage();
-		InputStream istream;
-		if (code == 500) {
-			istream = conn.getErrorStream();
-		} else {
-			istream = conn.getInputStream();
-		}
-		// Parse response into json
-		UnclosableInputStream wrapStream = new UnclosableInputStream(istream);
-		if (fileForNextRpcResponse == null) {
-			JsonParser jp = mapper.getFactory().createParser(wrapStream);
-			try {
-				checkToken(JsonToken.START_OBJECT, jp.nextToken());
-			} catch (JsonParseException ex) {
-				String receivedHeadingMessage = wrapStream.getHeadingBuffer();
-				if (receivedHeadingMessage.startsWith("{"))
-					throw ex;
-				throw new JsonClientException("Server response is not in JSON format:\n" + 
-						receivedHeadingMessage);
+		InputStream istream = null;
+
+		try {
+			if (code == 500) {
+				istream = conn.getErrorStream();
+			} else {
+				istream = conn.getInputStream();
 			}
-			Map<String, String> retError = null;
-			RET res = null;
-			while (jp.nextToken() != JsonToken.END_OBJECT) {
-				checkToken(JsonToken.FIELD_NAME, jp.getCurrentToken());
-				String fieldName = jp.getCurrentName();
-				if (fieldName.equals("error")) {
-					jp.nextToken();
-					retError = jp.getCodec().readValue(jp, new TypeReference<Map<String, String>>(){});
-				} else if (fieldName.equals("result")) {
-					checkFor500(code, wrapStream);
-					jp.nextToken();
-					try {
-						res = jp.getCodec().readValue(jp, cls);
-					} catch (JsonParseException e) {
-						throw new JsonClientException(
-								"Parse error while parsing response in: " +
-								wrapStream.getHeadingBuffer(), e);
-					}
-				} else {
-					jp.nextToken();
-					jp.getCodec().readValue(jp, Object.class);
-				}
-			}
-			if (retError != null) {
-				String data = retError.get("data") == null ? retError.get("error") : retError.get("data");
-				throw new ServerException(retError.get("message"),
-						new Integer(retError.get("code")), retError.get("name"),
-						data);
-			}
-			if (res == null && ret) {
-				throw new ServerException("An unknown server error occured",
-						0, "Unknown", null);
-			}
-			return res;
-		} else {
-			FileOutputStream fos = null;
-			try {
-				fos = new FileOutputStream(fileForNextRpcResponse);
-				byte[] rpcBuffer = new byte[10000];
-				while (true) {
-					int count = wrapStream.read(rpcBuffer);
-					if (count < 0)
-						break;
-					fos.write(rpcBuffer, 0, count);
-				}
-				fos.close();
-				JsonTokenStream jts = new JsonTokenStream(fileForNextRpcResponse);
-				Map<String, UObject> resp;
+			// Parse response into json
+			UnclosableInputStream wrapStream = new UnclosableInputStream(istream);
+			if (fileForNextRpcResponse == null) {
+				JsonParser jp = mapper.getFactory().createParser(wrapStream);
 				try {
-					resp = mapper.readValue(jts, new TypeReference<Map<String, UObject>>() {});
+					checkToken(JsonToken.START_OBJECT, jp.nextToken());
 				} catch (JsonParseException ex) {
 					String receivedHeadingMessage = wrapStream.getHeadingBuffer();
 					if (receivedHeadingMessage.startsWith("{"))
 						throw ex;
-					throw new JsonClientException("Server response is not in JSON format:\n" + 
+					throw new JsonClientException("Server response is not in JSON format:\n" +
 							receivedHeadingMessage);
-				} finally {
-					jts.close();
 				}
-				if (resp.containsKey("error")) {
-					Map<String, String> retError = resp.get("error").asClassInstance(new TypeReference<Map<String, String>>(){});
+				Map<String, String> retError = null;
+				RET res = null;
+				while (jp.nextToken() != JsonToken.END_OBJECT) {
+					checkToken(JsonToken.FIELD_NAME, jp.getCurrentToken());
+					String fieldName = jp.getCurrentName();
+					if (fieldName.equals("error")) {
+						jp.nextToken();
+						retError = jp.getCodec().readValue(jp, new TypeReference<Map<String, String>>() {
+						});
+					} else if (fieldName.equals("result")) {
+						checkFor500(code, wrapStream);
+						jp.nextToken();
+						try {
+							res = jp.getCodec().readValue(jp, cls);
+						} catch (JsonParseException e) {
+							throw new JsonClientException(
+									"Parse error while parsing response in: " +
+											wrapStream.getHeadingBuffer(), e);
+						}
+					} else {
+						jp.nextToken();
+						jp.getCodec().readValue(jp, Object.class);
+					}
+				}
+				if (retError != null) {
 					String data = retError.get("data") == null ? retError.get("error") : retError.get("data");
 					throw new ServerException(retError.get("message"),
 							new Integer(retError.get("code")), retError.get("name"),
 							data);
-				} if (resp.containsKey("result")) {
-					checkFor500(code, wrapStream);
-					RET res = mapper.readValue(resp.get("result").getPlacedStream(), cls);
-					return res;
-				} else {
-					throw new ServerException("An unknown server error occured", 0, "Unknown", null);
 				}
-			} finally {
-				if (fos != null)
+				if (res == null && ret) {
+					throw new ServerException("An unknown server error occured",
+							0, "Unknown", null);
+				}
+				return res;
+			} else {
+				FileOutputStream fos = null;
+				try {
+					fos = new FileOutputStream(fileForNextRpcResponse);
+					byte[] rpcBuffer = new byte[10000];
+					while (true) {
+						int count = wrapStream.read(rpcBuffer);
+						if (count < 0)
+							break;
+						fos.write(rpcBuffer, 0, count);
+					}
+					fos.close();
+					JsonTokenStream jts = new JsonTokenStream(fileForNextRpcResponse);
+					Map<String, UObject> resp;
 					try {
-						fos.close();
-					} catch (Exception ignore) {}
+						resp = mapper.readValue(jts, new TypeReference<Map<String, UObject>>() {
+						});
+					} catch (JsonParseException ex) {
+						String receivedHeadingMessage = wrapStream.getHeadingBuffer();
+						if (receivedHeadingMessage.startsWith("{"))
+							throw ex;
+						throw new JsonClientException("Server response is not in JSON format:\n" +
+								receivedHeadingMessage);
+					} finally {
+						jts.close();
+					}
+					if (resp.containsKey("error")) {
+						Map<String, String> retError = resp.get("error").asClassInstance(new TypeReference<Map<String, String>>() {
+						});
+						String data = retError.get("data") == null ? retError.get("error") : retError.get("data");
+						throw new ServerException(retError.get("message"),
+								new Integer(retError.get("code")), retError.get("name"),
+								data);
+					}
+					if (resp.containsKey("result")) {
+						checkFor500(code, wrapStream);
+						RET res = mapper.readValue(resp.get("result").getPlacedStream(), cls);
+						return res;
+					} else {
+						throw new ServerException("An unknown server error occured", 0, "Unknown", null);
+					}
+				} finally {
+					if (fos != null)
+						try {
+							fos.close();
+						} catch (Exception ignore) {
+						}
+				}
 			}
+		} finally {
+			if (istream != null)
+				istream.close();
 		}
 	}
 
