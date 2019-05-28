@@ -360,9 +360,7 @@ public class JsonClientCaller {
 		try (final OutputStream out = conn.getOutputStream()) {
 			writeRequestDataStatic(method, arg, out, id, context);
 		}
-		catch (IOException e){
-			throw e;
-		}
+
 
 		// Read response
 		int code = conn.getResponseCode();
