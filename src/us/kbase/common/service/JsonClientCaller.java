@@ -357,12 +357,10 @@ public class JsonClientCaller {
 			conn.setFixedLengthStreamingMode(size);
 		}
 		// Write real data into http output stream
-
-		try {
-			writeRequestDataStatic(method, arg, conn.getOutputStream(), id, context);
+		try (final OutputStream out = conn.getOutputStream()) {
+			writeRequestDataStatic(method, arg, out, id, context);
 		}
-		finally {
-			conn.getOutputStream().close();
+		catch (IOException ignore){
 		}
 
 		// Read response
