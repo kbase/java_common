@@ -473,8 +473,9 @@ public class JsonClientCaller {
 						}
 				}
 			}
-		} finally {
-			if (istream != null)
+		}
+		finally {
+			if(istream !=null)
 				istream.close();
 		}
 	}
