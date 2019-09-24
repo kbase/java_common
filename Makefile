@@ -38,6 +38,9 @@ build-docs: build-libs
 
 test:
 	$(ANT) test -Dcompile.jarfile=$(COMMON-JAR)
+	
+test-coverage:
+	$(ANT) test_coverage -Dcompile.jarfile=$(COMMON-JAR)
 
 test-client:
 	@echo "no client"

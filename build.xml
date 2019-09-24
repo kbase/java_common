@@ -72,6 +72,8 @@
     <delete dir="${classes}"/>
     <mkdir dir="${classes}"/>
     <mkdir dir="${docs}"/>
+    <mkdir dir="${test.reports.dir}"/>
+    <mkdir dir="${test.reports.dir}/html"/>
   </target>
 
   <target name="definejarfile" unless="jarfile">

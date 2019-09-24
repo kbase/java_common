@@ -13,7 +13,7 @@ install:
 
 script:
   # - ant javadoc javadoc is a mess. Pointless testing for now.
-  - make test
+  - make test-coverage
 
 after_success:
   - ls test-reports
