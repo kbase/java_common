@@ -124,7 +124,10 @@
 
   <path id="jacoco.classpath">
     <fileset dir="${jardir}">
-      <include name="jacoco/jacocoant.jar"/>
+      <include name="jacoco/org.jacoco.ant-0.8.4.jar"/>
+      <include name="jacoco/org.jacoco.core-0.8.4.jar"/>
+      <include name="jacoco/org.jacoco.report-0.8.4.jar"/>
+      <include name="jacoco/org.jacoco.agent-0.8.4.jar"/>
     </fileset>
   </path>
 
