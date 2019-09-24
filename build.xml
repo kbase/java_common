@@ -160,6 +160,7 @@
         <sourcefiles encoding="UTF-8">
           <fileset dir="${src}">
             <exclude name="**/test/**"/>
+            <exclude name="**/testlogger/**"/>
           </fileset>
         </sourcefiles>
       </structure>
