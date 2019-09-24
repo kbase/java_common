@@ -151,7 +151,7 @@ public class JsonServerServlet extends HttpServlet {
 	/** Create a new Servlet.
 	 * @param specServiceName the name of this server.
 	 */
-	public JsonServerServlet(String specServiceName) {
+	public JsonServerServlet(final String specServiceName) {
 		this.specServiceName = specServiceName;
 		this.mapper = new ObjectMapper().registerModule(new JacksonTupleModule());
 		this.rpcCache = new HashMap<String, Method>();
