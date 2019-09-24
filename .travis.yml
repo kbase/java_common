@@ -12,8 +12,8 @@ install:
   - cd -
 
 script:
-  - ant javadoc
-  - ant $ANT_TEST
+  # - ant javadoc javadoc is a mess. Pointless testing for now.
+  - make test
 
 #after_success:
 #  - ls test-reports
