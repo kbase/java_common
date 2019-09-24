@@ -155,6 +155,7 @@
         <classfiles>
           <fileset dir="${classes}">
             <exclude name="**/test/**"/>
+            <exclude name="**/testlogger/**"/>
           </fileset>
         </classfiles>
         <sourcefiles encoding="UTF-8">
