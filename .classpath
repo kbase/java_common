@@ -36,5 +36,10 @@
 	<classpathentry kind="lib" path="/jars/lib/jars/joda/joda-time-2.2.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/kbase/auth/kbase-auth-0.4.2.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/annotation/javax.annotation-api-1.3.2.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/google/guava-18.0.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/bytebuddy/byte-buddy-1.9.10.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/bytebuddy/byte-buddy-agent-1.9.10.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/mockito/mockito-core-3.0.0.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/objenesis/objenesis-2.6.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

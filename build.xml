@@ -61,7 +61,16 @@
     <include name="javassist/javassist-3.18.2.jar"/>
     <include name="joda/joda-time-2.2.jar"/>
     <include name="annotation/javax.annotation-api-1.3.2.jar"/>
+    <!-- mockito and dependencies -->
+    <include name="mockito/mockito-core-3.0.0.jar"/>
+    <include name="bytebuddy/byte-buddy-1.9.10.jar"/>
+    <include name="bytebuddy/byte-buddy-agent-1.9.10.jar"/>
+    <include name="objenesis/objenesis-2.6.jar"/>
+    <!-- more test dependencies -->
+    <include name="google/guava-18.0.jar"/>
   </fileset>
+
+  <!-- TODO separate out test dependencies -->
 
   <path id="compile.classpath">
     <fileset refid="lib"/>
