@@ -524,20 +524,6 @@ public class JsonServerServlet extends HttpServlet {
 			boolean lastParamRpcContextArr = rpcArgCount > 0 && rpcMethod.getParameterTypes()[rpcArgCount - 1].isArray() && 
 					rpcMethod.getParameterTypes()[rpcArgCount - 1].getComponentType().equals(RpcContext.class);
 			if (lastParamRpcContext || lastParamRpcContextArr) {
-				if (prepareProvenanceAutomatically()) {
-					try {
-						Class<?> paType = Class.forName("us.kbase.workspace.ProvenanceAction");
-						Object pa = paType.newInstance();
-						paType.getMethod("setService", String.class).invoke(pa, info.getModule());
-						paType.getMethod("setMethod", String.class).invoke(pa, info.getMethod());
-						paType.getMethod("setMethodParams", List.class).invoke(pa, paramsList);
-						List<Object> provenance = new ArrayList<Object>();
-						provenance.add(pa);
-						if (context == null)
-							context = new RpcContext();
-						context.setProvenance(provenance);
-					} catch (ClassNotFoundException ignore) {}
-				}
 				rpcArgCount--;
 				if (lastParamRpcContext) {
 					methodValues[rpcArgCount] = context;
@@ -787,10 +773,6 @@ public class JsonServerServlet extends HttpServlet {
 
 	public void setServiceVersion(String serviceVersion) {
 		this.serviceVersion = serviceVersion;
-	}
-
-	protected boolean prepareProvenanceAutomatically() {
-		return true;
 	}
 
 	public static class RpcCallData {
