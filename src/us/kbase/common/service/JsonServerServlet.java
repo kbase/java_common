@@ -1,5 +1,7 @@
 package us.kbase.common.service;
 
+import static java.util.Objects.requireNonNull;
+
 import us.kbase.auth.AuthConfig;
 import us.kbase.auth.AuthException;
 import us.kbase.auth.AuthToken;
@@ -61,7 +63,7 @@ public class JsonServerServlet extends HttpServlet {
 	private static final String X_FORWARDED_FOR = "X-Forwarded-For";
 	private static final String X_REAL_IP = "X-Real-IP";
 	private ObjectMapper mapper;
-	private Map<String, Method> rpcCache;
+	private final Map<String, Method> rpcCache = new HashMap<>();
 	public static final int LOG_LEVEL_ERR = JsonServerSyslog.LOG_LEVEL_ERR;
 	public static final int LOG_LEVEL_INFO = JsonServerSyslog.LOG_LEVEL_INFO;
 	public static final int LOG_LEVEL_DEBUG = JsonServerSyslog.LOG_LEVEL_DEBUG;
@@ -84,8 +86,8 @@ public class JsonServerServlet extends HttpServlet {
 	//set to 'true' for true, anything else for false.
 	private static final String CONFIG_AUTH_SERVICE_ALLOW_INSECURE_URL_PARAM =
 			"auth-service-url-allow-insecure";
-	private final ConfigurableAuthService auth;
-	protected Map<String, String> config = new HashMap<String, String>();
+	private final AuthenticationHandler auth;
+	protected Map<String, String> config; // would like to be final but might break stuff
 	private Server jettyServer = null;
 	private Integer jettyPort = null;
 	private boolean startupFailed = false;
@@ -94,6 +96,7 @@ public class JsonServerServlet extends HttpServlet {
 	private File rpcDiskCacheTempDir = null;
 	private final String specServiceName;
 	private String serviceVersion = null;
+	private final boolean trustX_IPHeaders;
 		
 	private final static DateTimeFormatter DATE_FORMATTER =
 			DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZoneUTC();
@@ -148,26 +151,101 @@ public class JsonServerServlet extends HttpServlet {
 		this.startupFailed = true;
 	}
 	
-	/** Create a new Servlet.
+	/** Create a new Servlet with default authentication handling.
+	 * The servlet will read a *.ini based configuration file, where the file location is
+	 * specified by the environment variable or system property KB_DEPLOYMENT_CONFIG. The system
+	 * property takes precedence.
+	 * 
+	 * The section of the ini file that the server will read is designated by, in order of
+	 * precedence:
+	 * * The system property KB_SERVICE_NAME
+	 * * The environment variable KB_SERVICE_NAME
+	 * * The specServiceName parameter with any characters including and after the first colon (:)
+	 *   removed.
+	 * 
+	 * The configuration read is available in the {@link #config} variable.
+	 * 
+	 * The server treats the following properties of the ini file section specially:
+	 * * auth-service-url: the URL of the KBase legacy endpoint for the KBase auth server
+	 *   (https://github.com/kbase/auth2).
+	 * * auth-service-url-allow-insecure: set to "true" (no quotes) to allow auth-service-url
+	 *   to be insecure. Do not do this in production or anywhere else you don't want tokens
+	 *   to leak.
+	 * * dont-trust-x-ip-headers or dont_trust_x_ip_headers: if either is true, the
+	 *   X-Forwarded-For and X-Real-IP headers will be ignored when determining the requester's
+	 *   IP address. See ({@link #getIpAddress(HttpServletRequest, boolean)} for more information.
+	 *   
+	 * For logging properties, refer to {@link JsonServerSyslog}.
+	 * 
 	 * @param specServiceName the name of this server.
 	 */
-	public JsonServerServlet(String specServiceName) {
+	public JsonServerServlet(final String specServiceName) {
 		this.specServiceName = specServiceName;
 		this.mapper = new ObjectMapper().registerModule(new JacksonTupleModule());
-		this.rpcCache = new HashMap<String, Method>();
-		for (Method m : getClass().getMethods()) {
-			if (m.isAnnotationPresent(JsonServerMethod.class)) {
-				JsonServerMethod ann = m.getAnnotation(JsonServerMethod.class);
-				rpcCache.put(ann.rpc(), m);
-			}
-		}
-		
+		setUpMethodCache();
 		sysLogger = new JsonServerSyslog(getServiceName(specServiceName),
 				KB_DEP, LOG_LEVEL_INFO, false);
 		userLogger = new JsonServerSyslog(sysLogger, true);
 		config = getConfig(specServiceName, sysLogger);
 		auth = getAuth(config);
+		this.trustX_IPHeaders =
+				!STRING_TRUE.equals(config.get(DONT_TRUST_X_IP_HEADERS)) &&
+				!STRING_TRUE.equals(config.get(DONT_TRUST_X_IP_HEADERS2));
+		//TODO TEST with default authentication. Needs auth server test mode running
+	}
+
+	private void setUpMethodCache() {
+		for (final Method m : getClass().getMethods()) {
+			if (m.isAnnotationPresent(JsonServerMethod.class)) {
+				JsonServerMethod ann = m.getAnnotation(JsonServerMethod.class);
+				rpcCache.put(ann.rpc(), m);
+			}
+		}
+	}
+	
+	/** A handler for authentication information. Given a token, it returns the validated token
+	 * and username of the user.
+	 *
+	 */
+	public interface AuthenticationHandler {
 		
+		/** Validate a token.
+		 * @param token the token to be validated.
+		 * @return the validated token.
+		 * @throws IOException if an IO error occurs.
+		 * @throws AuthException if the token could not be validated.
+		 */
+		AuthToken validateToken(String token) throws IOException, AuthException;
+	}
+	
+	/** Create a new Servlet with custom authentication handling. 
+	 * 
+	 * The servlet does not read from any configuration files, and the {@link #config} variable
+	 * will be an empty map.
+	 * 
+	 * @param specServiceName the name of this server, used for setting the service name when
+	 * logging. Overridden by the KB_SERVICE_NAME system property and environment variable.
+	 * @param auth the authentication handler.
+	 * @param trustX_IPHeaders true to trust the X-Forwarded-For and X-Real-IP headers (see
+	 * {@link #getIpAddress(HttpServletRequest, boolean)})
+	 */
+	public JsonServerServlet(
+			final String specServiceName,
+			final AuthenticationHandler auth,
+			final boolean trustX_IPHeaders) {
+		//TODO NOW use repackaged jackson jars
+		//TODO CODE hopefully remove rpc context?
+		// may also need to repackage jetty jar, not sure. I hope not
+		this.specServiceName = specServiceName;
+		this.auth = requireNonNull(auth, "auth");
+		this.trustX_IPHeaders = trustX_IPHeaders;
+		this.mapper = new ObjectMapper().registerModule(new JacksonTupleModule());
+		setUpMethodCache();
+		
+		sysLogger = new JsonServerSyslog(getServiceName(specServiceName),
+				null, LOG_LEVEL_INFO, false);
+		userLogger = new JsonServerSyslog(sysLogger, true);
+		config = new HashMap<>(); // this should really be immutable...
 	}
 	
 	protected String getAuthUrlFromConfig(final Map<String, String> config) {
@@ -178,7 +256,20 @@ public class JsonServerServlet extends HttpServlet {
 		return config.get(CONFIG_AUTH_SERVICE_ALLOW_INSECURE_URL_PARAM);
 	}
 	
-	protected ConfigurableAuthService getAuth(final Map<String, String> config) {
+	private class DefaultAuthenticationHandler implements AuthenticationHandler {
+		
+		private final ConfigurableAuthService auth;
+
+		private DefaultAuthenticationHandler(final ConfigurableAuthService auth) {
+			this.auth = auth;
+		}
+		
+		public AuthToken validateToken(final String token) throws IOException, AuthException {
+			return auth.validateToken(token);
+		}
+	}
+	
+	protected AuthenticationHandler getAuth(final Map<String, String> config) {
 		final String authURL = getAuthUrlFromConfig(config);
 		final AuthConfig c = new AuthConfig();
 		if (authURL != null && !authURL.isEmpty()) {
@@ -196,7 +287,7 @@ public class JsonServerServlet extends HttpServlet {
 			}
 		}
 		try {
-			return new ConfigurableAuthService(c);
+			return new DefaultAuthenticationHandler(new ConfigurableAuthService(c));
 		} catch (IOException e) {
 			startupFailed();
 			sysLogger.log(LOG_LEVEL_ERR, getClass().getName(),
@@ -246,7 +337,7 @@ public class JsonServerServlet extends HttpServlet {
 					"The configuration file " + deploy + " has no section " +
 					serviceName);
 		}
-		return config;
+		return config; // should really be immutable...
 	}
 
 	protected String getDefaultServiceName() {
@@ -254,6 +345,7 @@ public class JsonServerServlet extends HttpServlet {
 	}
 	
 	protected static String getServiceName(final String defaultServiceName) {
+		//TODO CODE test null or empty here
 		if (defaultServiceName == null) {
 			throw new NullPointerException("service name cannot be null");
 		}
@@ -262,8 +354,7 @@ public class JsonServerServlet extends HttpServlet {
 		if (serviceName == null) {
 			serviceName = defaultServiceName;
 			if (serviceName.contains(":"))
-				serviceName = serviceName.substring(
-						0, serviceName.indexOf(':')).trim();
+				serviceName = serviceName.substring(0, serviceName.indexOf(':')).trim();
 		}
 		return serviceName;
 	}
@@ -325,7 +416,7 @@ public class JsonServerServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		JsonServerSyslog.RpcInfo info = JsonServerSyslog.getCurrentRpcInfo().reset();
-		info.setIp(getIpAddress(request, config));
+		info.setIp(getIpAddress(request, trustX_IPHeaders));
 		response.setContentType(APP_JSON);
 		OutputStream output = response.getOutputStream();
 		JsonServerSyslog.getCurrentRpcInfo().reset();
@@ -354,7 +445,7 @@ public class JsonServerServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, final HttpServletResponse response) throws ServletException, IOException {
 		checkMemoryForRpc();
-		String remoteIp = getIpAddress(request, config);
+		String remoteIp = getIpAddress(request, trustX_IPHeaders);
 		setupResponseHeaders(request, response);
 		OutputStream output = response.getOutputStream();
 		ResponseStatusSetter respStatus = new ResponseStatusSetter() {
@@ -535,8 +626,9 @@ public class JsonServerServlet extends HttpServlet {
 				if (token != null || !rpcMethod.getAnnotation(JsonServerMethod.class).authOptional()) {
 					try {
 						userProfile = validateToken(token);
-						if (userProfile != null)
+						if (userProfile != null) {
 							info.setUser(userProfile.getUserName());
+						}
 					} catch (Throwable ex) {
 						writeError(response, -32400, "Token validation failed: " + ex.getMessage(), ex, output);
 						return;
@@ -633,22 +725,18 @@ public class JsonServerServlet extends HttpServlet {
 	 * 1. The first address in X-Forwarded-For
 	 * 2. X-Real-IP
 	 * 3. The remote address.
-	 * If dont_trust_x_ip_headers or dont-trust-x-ip-headers is set to "true"
-	 * in the configuration, the remote address is returned.
 	 * @param request the HTTP request
-	 * @param config the server configuration as returned by getConfig().
+	 * @param trustX_IPHeaders if true, always return the remote address, ignoring any other
+	 * headers.
 	 * @return the IP address of the client.
 	 */
 	public static String getIpAddress(
 			final HttpServletRequest request,
-			final Map<String, String> config) {
+			final boolean trustX_IPHeaders) {
 		final String xFF = request.getHeader(X_FORWARDED_FOR);
 		final String realIP = request.getHeader(X_REAL_IP);
-		final boolean trustXHeaders =
-				!STRING_TRUE.equals(config.get(DONT_TRUST_X_IP_HEADERS)) &&
-				!STRING_TRUE.equals(config.get(DONT_TRUST_X_IP_HEADERS2));
 
-		if (trustXHeaders) {
+		if (trustX_IPHeaders) {
 			if (xFF != null && !xFF.isEmpty()) {
 				return xFF.split(",")[0].trim();
 			}

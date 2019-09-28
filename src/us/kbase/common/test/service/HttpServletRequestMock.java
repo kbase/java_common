@@ -25,7 +25,11 @@ public class HttpServletRequestMock implements HttpServletRequest {
 	}
 	
 	public void setHeader(String key, String value) {
-		headers.put(key, value);
+		if (value == null) {
+			headers.remove(key);
+		} else {
+			headers.put(key, value);
+		}
 	}
 	
 	@Override

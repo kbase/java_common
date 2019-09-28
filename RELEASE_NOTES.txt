@@ -4,6 +4,15 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.1.0 (Release TDB)
+----------------------------
+
+* JsonServerServlet method dispatch to the Narrative Job Service (via *_async and *_check) methods
+  has been removed.
+* JsonServerServlet automatic provenance generation has been removed.
+* Java required version is now 1.8.
+* JsonServerServlet now has a constructor more suited for embedding the servlet as a library.
+
 VERSION: 0.0.25 (Release 11/15/2018)
 ------------------------------------
 - The SDK logger now reads an environment variable, `KB_SDK_LOGGER_TARGET_PACKAGE`,
