@@ -18,7 +18,6 @@
 	<classpathentry kind="lib" path="/jars/lib/jars/jackson/jackson-databind-2.2.3.jar" sourcepath="/jars/lib/jars/jackson/jackson-databind-2.2.3-sources.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/junit/junit-4.9.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/mongo/mongo-java-driver-2.13.3.jar"/>
-	<classpathentry kind="lib" path="/jars/lib/jars/easymock/easymock-3.2.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/ini4j/ini4j-0.5.2.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/jetty/jetty-all-7.0.0.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/jna/jna-3.4.0.jar"/>
