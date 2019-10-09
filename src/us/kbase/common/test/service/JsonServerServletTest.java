@@ -7,6 +7,7 @@ import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
@@ -37,6 +38,7 @@ import us.kbase.auth.AuthToken;
 import us.kbase.common.service.JsonServerMethod;
 import us.kbase.common.service.JsonServerServlet;
 import us.kbase.common.service.JsonServerServlet.AuthenticationHandler;
+import us.kbase.common.service.JsonServerSyslog;
 import us.kbase.common.service.RpcContext;
 import us.kbase.common.test.TestCommon;
 
@@ -51,10 +53,11 @@ public class JsonServerServletTest {
 		public List<AuthToken> tokens = new ArrayList<>();
 
 		public FakeServer(
-				final String specServiceName,
 				final AuthenticationHandler auth,
-				final boolean trustX_IPHeaders) {
-			super(specServiceName, auth, trustX_IPHeaders);
+				final boolean trustX_IPHeaders,
+				final JsonServerSyslog syslog,
+				final JsonServerSyslog userlog) {
+			super(auth, trustX_IPHeaders, syslog, userlog);
 		}
 		
 		@JsonServerMethod(rpc = "FakeServer.do_the_thing1", async=true)
@@ -129,17 +132,20 @@ public class JsonServerServletTest {
 	@Test
 	public void constructServerFail() throws Exception {
 		final AuthenticationHandler ah = mock(AuthenticationHandler.class);
+		final JsonServerSyslog log = mock(JsonServerSyslog.class);
 		
-		constructFail(null, ah, new NullPointerException("service name cannot be null"));
-		constructFail("f", null, new NullPointerException("auth"));
+		constructFail(null, log, log, new NullPointerException("auth"));
+		constructFail(ah, null, log, new NullPointerException("sysLogger"));
+		constructFail(ah, log, null, new NullPointerException("userLogger"));
 	}
 	
 	private void constructFail(
-			final String name,
 			final AuthenticationHandler auth,
+			final JsonServerSyslog syslog,
+			final JsonServerSyslog userlog,
 			final Exception expected) {
 		try {
-			new FakeServer(name, auth, true);
+			new FakeServer(auth, true, syslog, userlog);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -156,7 +162,6 @@ public class JsonServerServletTest {
 	public void postWithOptionalAuthNoToken() throws Exception {
 		post("FakeServer.do_the_thing2", 8, null, true);
 	}
-	
 	
 	@Test
 	public void postWithOptionalAuthWithToken() throws Exception {
@@ -175,13 +180,17 @@ public class JsonServerServletTest {
 			final boolean expectToken)
 			throws Exception {
 		final AuthenticationHandler ah = mock(AuthenticationHandler.class);
+		final JsonServerSyslog sysLog = mock(JsonServerSyslog.class);
+		final JsonServerSyslog userLog = mock(JsonServerSyslog.class);
 		final HttpServletRequest req = mock(HttpServletRequest.class);
 		final HttpServletResponse resp = mock(HttpServletResponse.class);
 		
-		// note the trust x ip headers arg is untested - only affects logging the ip address
-		final FakeServer fs = new FakeServer("servName", ah, false);
+		when(sysLog.getServiceName()).thenReturn("myserv");
 		
-		assertThat("incorrect service name", fs.getDefaultServiceName(), is("servName"));
+		// note the trust x ip headers arg is untested - only affects logging the ip address
+		final FakeServer fs = new FakeServer(ah, false, sysLog, userLog);
+		
+		assertThat("incorrect service name", fs.getDefaultServiceName(), is("myserv"));
 		assertThat("incorrect config", fs.getConfig(), is(Collections.emptyMap()));
 		
 		when(req.getRemoteAddr()).thenReturn("123.456.789.123");
@@ -227,5 +236,37 @@ public class JsonServerServletTest {
 			verifyZeroInteractions(ah);
 		}
 		assertThat("incorrect on rpc done calls", fs.onRpcMethodDoneCalls, is(1));
+		verify(sysLog).log(6, FakeServer.class.getName(), "start method");
+		verify(sysLog).log(6, FakeServer.class.getName(), "end method");
+		verifyZeroInteractions(userLog);
+	}
+	
+	@Test
+	public void customUserLogger() throws Exception {
+		/* tests that a user logger specified as part of the embed-oriented constructor gets
+		 * appropriate log messages.
+		 * Doesn't rehash all the stuff tested in the postWith* tests.
+		 * Doesn't check all the methods, as the test is targeted to making sure the constructor
+		 * works, not that all the methods work.
+		 */
+		
+		final AuthenticationHandler ah = mock(AuthenticationHandler.class);
+		final JsonServerSyslog sysLog = mock(JsonServerSyslog.class);
+		final JsonServerSyslog userLog = mock(JsonServerSyslog.class);
+		
+		when(sysLog.getServiceName()).thenReturn("myserv");
+		
+		final FakeServer fs = new FakeServer(ah, false, sysLog, userLog);
+		
+		fs.logErr("oh crap");
+		fs.logInfo("oh goody");
+		fs.logDebug("oh what?");
+		
+		verify(userLog).logErr("oh crap");
+		verify(userLog).logInfo("oh goody");
+		verify(userLog).logDebug("oh what?");
+		
+		verify(sysLog).getServiceName();
+		verifyNoMoreInteractions(sysLog);
 	}
 }

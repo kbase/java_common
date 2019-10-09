@@ -32,6 +32,8 @@ public class LoggerTest {
 //		getenv().put("KB_SDK_LOGGER_TARGET_PACKAGE", "testlogger");
 		// test that passing a null config param works
 		final JsonServerSyslog l = new JsonServerSyslog("serv", null);
+		assertThat("incorrect service name", l.getServiceName(), is("serv"));
+		
 		final List<String> logout = new LinkedList<>();
 		
 		l.changeOutput(new SyslogOutput() {
