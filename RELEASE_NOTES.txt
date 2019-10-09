@@ -9,9 +9,11 @@ VERSION: 0.1.0 (Release TDB)
 
 * JsonServerServlet method dispatch to the Narrative Job Service (via *_async and *_check) methods
   has been removed.
+  * This includes removing the us.kbase.common.service.JobState class.
 * JsonServerServlet automatic provenance generation has been removed.
 * Java required version is now 1.8.
 * JsonServerServlet now has a constructor more suited for embedding the servlet as a library.
+* The unused us.kbase.common.service.GwtTransformer class was removed.
 
 VERSION: 0.0.25 (Release 11/15/2018)
 ------------------------------------
