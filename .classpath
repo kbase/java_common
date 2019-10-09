@@ -6,9 +6,6 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/http/httpclient-4.3.1.jar"/>
-	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/http/httpcore-4.3.jar"/>
-	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/http/httpmime-4.3.1.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-io-2.4.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-lang3-3.1.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-logging-1.1.1.jar"/>

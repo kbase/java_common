@@ -40,8 +40,6 @@
     <include name="jackson/jackson-core-2.2.3.jar"/>
     <include name="jackson/jackson-databind-2.2.3.jar"/>
     <include name="jackson/jackson-annotations-2.2.3.jar"/>
-    <include name="derby/derby-10.10.1.1.jar"/>
-    <include name="easymock/easymock-3.2.jar"/>
     <include name="ini4j/ini4j-0.5.2.jar"/>
     <include name="jetty/jetty-all-7.0.0.jar"/>
     <include name="jna/jna-3.4.0.jar"/>
@@ -49,9 +47,6 @@
     <include name="syslog4j/syslog4j-0.9.46.jar"/>
     <include name="kbase/auth/kbase-auth-0.4.2.jar"/>
     <include name="texttable/text-table-formatter-1.1.1.jar"/>
-    <include name="apache_commons/http/httpclient-4.3.1.jar"/>
-    <include name="apache_commons/http/httpcore-4.3.jar"/>
-    <include name="apache_commons/http/httpmime-4.3.1.jar"/>
     <include name="apache_commons/commons-logging-1.1.1.jar"/>
     <include name="slf4j/slf4j-api-1.7.7.jar"/>
     <include name="logback/logback-core-1.1.2.jar"/>
