@@ -93,6 +93,13 @@ public class JsonServerSyslog {
 		}
 	}
 	
+	/** Get the service name assigned to this logger.
+	 * @return the service name.
+	 */
+	public String getServiceName() {
+		return serviceName;
+	}
+	
 	/** Get the package name that will be serviced by this logger. This defaults to us.kbase
 	 * and can be set via the {@link #ENV_VAR_PACKAGE_NAME} environment variable prior to
 	 * logger startup. Setting the package incorrectly can lead to undefined behavior.
