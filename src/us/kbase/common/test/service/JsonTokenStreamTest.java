@@ -22,6 +22,7 @@ import org.junit.Test;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.JsonTokenId;
 import com.fasterxml.jackson.core.io.SerializedString;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,6 +54,33 @@ public class JsonTokenStreamTest {
 		basicJsonData.add("1");
 		basicJsonData.add("1.2");
 		basicJsonData.add("-1.4E10"); //should really allow e or E
+	}
+	
+	@Test
+	public void newTokenInformationMethods() throws Exception {
+		/* This test checks the new token information methods added in between Jackson 2.2.3 and
+		 * Jackson 2.9.9.
+		 */
+		
+		final JsonTokenStream jts = new JsonTokenStream(basicJsonData.get(0));
+		assertThat("incorrect token ID", jts.getCurrentTokenId(), is(0));
+		assertThat("incorrect has token ID", jts.hasTokenId(0), is(true));
+		assertThat("incorrect has token ID", jts.hasTokenId(1), is(false));
+		assertThat("incorrect has token", jts.hasToken(null), is(true));
+		assertThat("incorrect has token", jts.hasToken(JsonToken.NOT_AVAILABLE), is(true));
+		assertThat("incorrect has token", jts.hasToken(JsonToken.START_OBJECT), is(false));
+		
+		jts.nextToken();
+		
+		assertThat("incorrect token ID", jts.getCurrentTokenId(), is(JsonTokenId.ID_START_OBJECT));
+		assertThat("incorrect has token ID", jts.hasTokenId(0), is(false));
+		assertThat("incorrect has token ID", jts.hasTokenId(JsonTokenId.ID_START_OBJECT),
+				is(true));
+		assertThat("incorrect has token", jts.hasToken(null), is(false));
+		assertThat("incorrect has token", jts.hasToken(JsonToken.NOT_AVAILABLE), is(false));
+		assertThat("incorrect has token", jts.hasToken(JsonToken.START_OBJECT), is(true));
+		
+		jts.close();
 	}
 	
 	@Test
@@ -138,6 +166,36 @@ public class JsonTokenStreamTest {
 		assertThat("incorrect text", jts.nextBooleanValue(), nullValue());
 		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar", "1")));
 		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		
+		// close object
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_OBJECT));
+		assertThat("incorrect closed", jts.isClosed(), is(false));
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		assertThat("incorrect closed", jts.isClosed(), is(true));
+		
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		jts.close();
+	}
+	
+	@Test
+	public void nextFieldName() throws Exception {
+		final Object data = ImmutableMap.of(
+				"foo", "baz",
+				"bar", "bat");
+		final JsonTokenStream jts = new JsonTokenStream(
+				new ObjectMapper().writeValueAsString(data));
+		
+		// foo tree
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_OBJECT));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList()));
+		assertThat("incorrect name", jts.nextFieldName(), is("foo"));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect name", jts.nextFieldName(), nullValue());
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect name", jts.nextFieldName(), is("bar"));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		assertThat("incorrect name", jts.nextFieldName(), is(nullValue()));
 		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
 		
 		// close object
