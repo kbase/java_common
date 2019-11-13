@@ -10,9 +10,6 @@
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-lang3-3.1.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-logging-1.1.1.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/velocity-1.7.jar"/>
-	<classpathentry kind="lib" path="/jars/lib/jars/jackson/jackson-annotations-2.2.3.jar" sourcepath="/jars/lib/jars/jackson/jackson-annotations-2.2.3-sources.jar"/>
-	<classpathentry kind="lib" path="/jars/lib/jars/jackson/jackson-core-2.2.3.jar" sourcepath="/jars/lib/jars/jackson/jackson-core-2.2.3-sources.jar"/>
-	<classpathentry kind="lib" path="/jars/lib/jars/jackson/jackson-databind-2.2.3.jar" sourcepath="/jars/lib/jars/jackson/jackson-databind-2.2.3-sources.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/junit/junit-4.9.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/mongo/mongo-java-driver-2.13.3.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/ini4j/ini4j-0.5.2.jar"/>
@@ -36,5 +33,16 @@
 	<classpathentry kind="lib" path="/jars/lib/jars/bytebuddy/byte-buddy-agent-1.9.10.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/mockito/mockito-core-3.0.0.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/objenesis/objenesis-2.6.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/jackson/jackson-annotations-2.9.9.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/jackson/jackson-core-2.9.9.jar" sourcepath="/jars/lib/jars/jackson/jackson-core-2.9.9-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/jars/lib/jars/jackson/jackson-core-2.9.9-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="/jars/lib/jars/jackson/jackson-databind-2.9.9.jar" sourcepath="/jars/lib/jars/jackson/jackson-databind-2.9.9-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/jars/lib/jars/jackson/jackson-databind-2.9.9-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

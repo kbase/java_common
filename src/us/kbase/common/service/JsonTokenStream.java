@@ -37,6 +37,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonStreamContext;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.JsonTokenId;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.SerializableString;
 import com.fasterxml.jackson.core.TreeNode;
@@ -114,7 +115,8 @@ public class JsonTokenStream extends JsonParser {
 
 	}
 	
-	//TODO add a method like InputStream getInputStream() that otherwise behaves like writeJson()
+	//TODO CODE can this be simplified?
+	//TODO CODE add a method like InputStream getInputStream() that otherwise behaves like writeJson()
 	
 	/**
 	 * Create token stream for data source of one of the following types: File, String, byte[], JsonNode.
@@ -510,9 +512,9 @@ public class JsonTokenStream extends JsonParser {
 	}
 	
 	private void debug() {
-	 	StackTraceElement el2 = Thread.currentThread().getStackTrace()[2];
-	 	StackTraceElement el3 = Thread.currentThread().getStackTrace()[3];
-	 	try {
+		StackTraceElement el2 = Thread.currentThread().getStackTrace()[2];
+		StackTraceElement el3 = Thread.currentThread().getStackTrace()[3];
+		try {
 			System.out.println("Calling JsonTokenStream." + el2.getMethodName() + " from " +
 					el3.getClassName() + "." + el3.getMethodName() + ":" + el3.getLineNumber());
 		} catch (Exception ex) {
@@ -941,7 +943,11 @@ public class JsonTokenStream extends JsonParser {
 		return super.nextBooleanValue();
 	}
 
-	// TODO Override String nextFieldName() when updating jars, added in 2.5
+	@Override
+	public String nextFieldName() throws IOException, JsonParseException {
+		if (debug) debug();
+		return super.nextFieldName();
+	}
 	
 	@Override
 	public boolean nextFieldName(final SerializableString str)
@@ -1448,5 +1454,31 @@ public class JsonTokenStream extends JsonParser {
 	public interface DebugOpenCloseListener {
 		public void onStreamOpen(JsonTokenStream instance);
 		public void onStreamClosed(JsonTokenStream instance);
+	}
+
+	@Override
+	public int getCurrentTokenId() {
+		if (debug) debug();
+		final JsonToken current = getCurrentToken();
+		if (current == null) {
+			return JsonTokenId.ID_NO_TOKEN;
+		}
+		return current.id();
+	}
+
+	@Override
+	public boolean hasToken(final JsonToken t) {
+		if (debug) debug();
+		final JsonToken current = getCurrentToken();
+		if (current == null && (t == null || t == JsonToken.NOT_AVAILABLE)) {
+			return true;
+		}
+		return current == t;
+	}
+
+	@Override
+	public boolean hasTokenId(int id) {
+		if (debug) debug();
+		return getCurrentTokenId() == id;
 	}
 }

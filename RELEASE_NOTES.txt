@@ -16,6 +16,8 @@ VERSION: 0.1.0 (Release TBD)
 * The unused us.kbase.common.service.GwtTransformer class was removed.
 * The unused us.kbase.common.utils.JsonTreeGenerator class was removed.
 * Deprecated us.kbase.common.mongo.GetMongoDB class.
+* Fixed several bugs with token stream processing in JsonTokenStream.java.
+* Updated Jackson jars to v2.9.
 
 VERSION: 0.0.25 (Release 11/15/2018)
 ------------------------------------
