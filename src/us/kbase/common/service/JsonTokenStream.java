@@ -276,6 +276,8 @@ public class JsonTokenStream extends JsonParser {
 			lastToken = nextToken();
 		List<String> ret = new ArrayList<String>();
 		int size = path.size() - 1;
+		// this is a bug. If the path is empty and this method is called 
+		// you'll get an index exception
 		for (int i = 0; i < size; i++) {
 			Object item = path.get(i);
 			ret.add(String.valueOf(item));
@@ -508,9 +510,11 @@ public class JsonTokenStream extends JsonParser {
 	}
 	
 	private void debug() {
-		StackTraceElement el = Thread.currentThread().getStackTrace()[2];
-		try {
-			System.out.println("Calling JsonTokenStream." + el.getMethodName());
+	 	StackTraceElement el2 = Thread.currentThread().getStackTrace()[2];
+	 	StackTraceElement el3 = Thread.currentThread().getStackTrace()[3];
+	 	try {
+			System.out.println("Calling JsonTokenStream." + el2.getMethodName() + " from " +
+					el3.getClassName() + "." + el3.getMethodName() + ":" + el3.getLineNumber());
 		} catch (Exception ex) {
 			throw new IllegalStateException(ex);
 		}
@@ -752,7 +756,12 @@ public class JsonTokenStream extends JsonParser {
 	@Override
 	public JsonToken nextValue() throws IOException, JsonParseException {
 		if (debug) debug();
-		return getInner().nextValue();
+		// copied from com.fasterxml.jackson.core.base.ParserMinimalBase
+		JsonToken t = nextToken();
+		if (t == JsonToken.FIELD_NAME) {
+			t = nextToken();
+		}
+		return t;
 	}
 	
 	@Override
@@ -929,32 +938,34 @@ public class JsonTokenStream extends JsonParser {
 	@Override
 	public Boolean nextBooleanValue() throws IOException, JsonParseException {
 		if (debug) debug();
-		return getInner().nextBooleanValue();
+		return super.nextBooleanValue();
 	}
+
+	// TODO Override String nextFieldName() when updating jars, added in 2.5
 	
 	@Override
-	public boolean nextFieldName(SerializableString arg0) throws IOException,
-			JsonParseException {
+	public boolean nextFieldName(final SerializableString str)
+			throws IOException, JsonParseException {
 		if (debug) debug();
-		return getInner().nextFieldName(arg0);
+		return super.nextFieldName(str);
 	}
 	
 	@Override
 	public int nextIntValue(int arg0) throws IOException, JsonParseException {
 		if (debug) debug();
-		return getInner().nextIntValue(arg0);
+		return super.nextIntValue(arg0);
 	}
 	
 	@Override
 	public long nextLongValue(long arg0) throws IOException, JsonParseException {
 		if (debug) debug();
-		return getInner().nextLongValue(arg0);
+		return super.nextLongValue(arg0);
 	}
 	
 	@Override
 	public String nextTextValue() throws IOException, JsonParseException {
 		if (debug) debug();
-		return getInner().nextTextValue();
+		return super.nextTextValue();
 	}
 	
 	@Override
