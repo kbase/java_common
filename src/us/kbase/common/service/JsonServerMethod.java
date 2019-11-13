@@ -14,8 +14,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface JsonServerMethod {
 	String rpc();
-	boolean tuple() default false;
+	boolean tuple() default false; // is this used? Workspace returns tuples but it's false
 	boolean authOptional() default false;
-	boolean async() default true;
-	boolean sync() default true;
+	boolean async() default true; // removed from JsonServerServlet, not from SDK
+	boolean sync() default true;  // removed from JsonServerServlet, not from SDK
 }

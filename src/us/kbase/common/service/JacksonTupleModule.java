@@ -35,6 +35,9 @@ import com.fasterxml.jackson.databind.util.TokenBuffer;
  */
 @SuppressWarnings("serial")
 public class JacksonTupleModule extends SimpleModule {
+	
+	// TODO CODE fix deprecations for Jackson and Java 11 updates
+	
 	public JacksonTupleModule() {
 		super(JacksonTupleModule.class.getSimpleName(), new Version(1, 0, 0, null, null, null));
 		setSerializers(new SimpleSerializers() {
@@ -193,7 +196,7 @@ public class JacksonTupleModule extends SimpleModule {
 
 		public static JsonNode valueToTree(ObjectCodec oc, Object fromValue) throws JsonProcessingException, IOException {
 			if (fromValue == null) return null;
-			TokenBuffer buf = new TokenBuffer(oc);
+			TokenBuffer buf = new TokenBuffer(oc, false);
 			oc.writeValue(buf, fromValue);
 			JsonParser jp = buf.asParser();
 			JsonNode result = oc.readTree(jp);
@@ -216,6 +219,8 @@ public class JacksonTupleModule extends SimpleModule {
 	
 	public static class UObjectDeserializer extends JsonDeserializer<UObject> {
 
+		//TODO NOW BUG this uses the same underlying jts for every uobject. Race condition.
+		
 		public UObject deserialize(JsonParser p, DeserializationContext ctx) throws IOException, JsonProcessingException {
 			if (p instanceof JsonTokenStream) {
 				JsonTokenStream jts = (JsonTokenStream)p;
