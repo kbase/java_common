@@ -1,4 +1,4 @@
-package us.kbase.common.service.test;
+package us.kbase.common.test.service;
 
 import java.io.IOException;
 import java.io.PrintWriter;

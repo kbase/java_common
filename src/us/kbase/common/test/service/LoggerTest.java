@@ -1,4 +1,4 @@
-package us.kbase.common.service.test;
+package us.kbase.common.test.service;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -32,6 +32,8 @@ public class LoggerTest {
 //		getenv().put("KB_SDK_LOGGER_TARGET_PACKAGE", "testlogger");
 		// test that passing a null config param works
 		final JsonServerSyslog l = new JsonServerSyslog("serv", null);
+		assertThat("incorrect service name", l.getServiceName(), is("serv"));
+		
 		final List<String> logout = new LinkedList<>();
 		
 		l.changeOutput(new SyslogOutput() {

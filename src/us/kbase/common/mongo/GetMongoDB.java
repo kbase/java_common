@@ -32,11 +32,12 @@ import org.slf4j.LoggerFactory;
  * with.
  *  
  * @author gaprice@lbl.gov
+ * @deprecated
  *
  */
 public class GetMongoDB {
 	
-	//TODO needs rewrite. 1) Add tests, 2) deprecated methods, 2) replace NFE, 3) auth in constructor, 4) multiple hosts option, 5) logger on/off option 6) retry rewrite for mongo timeouts. 
+	//TODO remove. Uses incredibly old mongo client. 
 	
 	private static Logger getLogger() {
 		return LoggerFactory.getLogger(GetMongoDB.class);
@@ -45,6 +46,7 @@ public class GetMongoDB {
 	private static final Map<String, MongoClient> HOST_TO_CLIENT = 
 			new HashMap<String, MongoClient>();
 	
+	/** @deprecated */
 	public synchronized static void closeAllConnections() {
 		for (final String host: HOST_TO_CLIENT.keySet()) {
 			HOST_TO_CLIENT.get(host).close();
@@ -87,6 +89,7 @@ public class GetMongoDB {
 	 * @throws IOException if an IO exception occurs
 	 * @throws InterruptedException if the thread is interrupted while it's
 	 * sleeping between connection attempts
+	 * @deprecated
 	 */
 	public static DB getDB(final String host, final String database)
 			throws UnknownHostException, InvalidHostException, IOException,
@@ -108,6 +111,7 @@ public class GetMongoDB {
 	 * @throws IOException if an IO exception occurs
 	 * @throws InterruptedException if the thread is interrupted while it's
 	 * sleeping between connection attempts
+	 * @deprecated
 	 */
 	public static DB getDB(final String host, final String database,
 			final int retryCount, final int logIntervalCount)
@@ -156,6 +160,7 @@ public class GetMongoDB {
 	 * @throws MongoAuthException if the provided credentials are incorrect.
 	 * @throws InterruptedException if the thread is interrupted while it's
 	 * sleeping between connection attempts
+	 * @deprecated
 	 */
 	public static DB getDB(final String host, final String database,
 			final String user, final String pwd)
@@ -181,6 +186,7 @@ public class GetMongoDB {
 	 * @throws MongoAuthException if the provided credentials are incorrect.
 	 * @throws InterruptedException if the thread is interrupted while it's
 	 * sleeping between connection attempts
+	 * @deprecated
 	 */
 	public static DB getDB(final String host, final String database,
 			final String user, final String pwd,

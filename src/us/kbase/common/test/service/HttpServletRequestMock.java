@@ -1,4 +1,4 @@
-package us.kbase.common.service.test;
+package us.kbase.common.test.service;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -25,7 +25,11 @@ public class HttpServletRequestMock implements HttpServletRequest {
 	}
 	
 	public void setHeader(String key, String value) {
-		headers.put(key, value);
+		if (value == null) {
+			headers.remove(key);
+		} else {
+			headers.put(key, value);
+		}
 	}
 	
 	@Override

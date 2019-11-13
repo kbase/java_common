@@ -1,4 +1,4 @@
-package us.kbase.common.service.test;
+package us.kbase.common.test.service;
 
 import junit.framework.Assert;
 
@@ -60,7 +60,10 @@ public class TupleTest {
             Assert.fail("Error should happen");
         } catch (InvalidFormatException ex) {
             System.out.println(ex.getMessage());
-            Assert.assertTrue(ex.getMessage().contains("Can not construct instance of int from String value"));
+            Assert.assertTrue(ex.getMessage().contains(
+                   "Cannot deserialize value of type `java.lang.Integer` from String \"test\": " +
+                   "not a valid Integer value\n at [Source: (String)\"[\"test\",\"test\"]\"; " +
+                   "line: 1, column: 2]"));
         }
     }
 }

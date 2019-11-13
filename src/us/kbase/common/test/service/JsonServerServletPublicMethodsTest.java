@@ -1,4 +1,4 @@
-package us.kbase.common.service.test;
+package us.kbase.common.test.service;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -31,50 +31,33 @@ public class JsonServerServletPublicMethodsTest {
 
 	@Test
 	public void ipAddress() throws Exception {
-		Map<String, String> config = new HashMap<String, String>();
 		HttpServletRequestMock req = new HttpServletRequestMock();
 		req.setIpAddress("000.000.000.001");
 		assertThat("correct IP address", JsonServerServlet.getIpAddress(
-				req, config), is("000.000.000.001"));
+				req, true), is("000.000.000.001"));
 		
 		req.setHeader("X-Real-IP", "");
 		assertThat("correct IP address", JsonServerServlet.getIpAddress(
-				req, config), is("000.000.000.001"));
+				req, true), is("000.000.000.001"));
 		
 		req.setHeader("X-Real-IP", "000.000.000.002");
 		assertThat("correct IP address", JsonServerServlet.getIpAddress(
-				req, config), is("000.000.000.002"));
+				req, true), is("000.000.000.002"));
 		
 		req.setHeader("X-Forwarded-For", "");
 		assertThat("correct IP address", JsonServerServlet.getIpAddress(
-				req, config), is("000.000.000.002"));
+				req, true), is("000.000.000.002"));
 		
 		req.setHeader("X-Forwarded-For", "000.000.000.003 , somecrap");
 		assertThat("correct IP address", JsonServerServlet.getIpAddress(
-				req, config), is("000.000.000.003"));
+				req, true), is("000.000.000.003"));
 		
-		config.put("dont_trust_x_ip_headers", "false");
-		config.put("dont-trust-x-ip-headers", "tru");
 		assertThat("correct IP address", JsonServerServlet.getIpAddress(
-				req, config), is("000.000.000.003"));
+				req, false), is("000.000.000.001"));
 		
-		config.put("dont-trust-x-ip-headers", "true");
+		req.setHeader("X-Forwarded-For", null);
 		assertThat("correct IP address", JsonServerServlet.getIpAddress(
-				req, config), is("000.000.000.001"));
-		
-		config.put("dont_trust_x_ip_headers", "true");
-		config.put("dont-trust-x-ip-headers", "tru");
-		assertThat("correct IP address", JsonServerServlet.getIpAddress(
-				req, config), is("000.000.000.001"));
-		
-		config.remove("X-Forwarded-For");
-		assertThat("correct IP address", JsonServerServlet.getIpAddress(
-				req, config), is("000.000.000.001"));
-		
-		config.put("dont_trust_x_ip_headers", "tru");
-		config.put("dont-trust-x-ip-headers", "true");
-		assertThat("correct IP address", JsonServerServlet.getIpAddress(
-				req, config), is("000.000.000.001"));
+				req, false), is("000.000.000.001"));
 	}
 	
 	//http://quirkygba.blogspot.com/2009/11/setting-environment-variables-in-java.html

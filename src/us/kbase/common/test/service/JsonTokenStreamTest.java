@@ -1,6 +1,7 @@
 package us.kbase.common.test.service;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
@@ -20,8 +21,12 @@ import org.junit.Test;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.JsonTokenId;
+import com.fasterxml.jackson.core.io.SerializedString;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.common.service.JsonTokenStream;
 
@@ -49,6 +54,33 @@ public class JsonTokenStreamTest {
 		basicJsonData.add("1");
 		basicJsonData.add("1.2");
 		basicJsonData.add("-1.4E10"); //should really allow e or E
+	}
+	
+	@Test
+	public void newTokenInformationMethods() throws Exception {
+		/* This test checks the new token information methods added in between Jackson 2.2.3 and
+		 * Jackson 2.9.9.
+		 */
+		
+		final JsonTokenStream jts = new JsonTokenStream(basicJsonData.get(0));
+		assertThat("incorrect token ID", jts.getCurrentTokenId(), is(0));
+		assertThat("incorrect has token ID", jts.hasTokenId(0), is(true));
+		assertThat("incorrect has token ID", jts.hasTokenId(1), is(false));
+		assertThat("incorrect has token", jts.hasToken(null), is(true));
+		assertThat("incorrect has token", jts.hasToken(JsonToken.NOT_AVAILABLE), is(true));
+		assertThat("incorrect has token", jts.hasToken(JsonToken.START_OBJECT), is(false));
+		
+		jts.nextToken();
+		
+		assertThat("incorrect token ID", jts.getCurrentTokenId(), is(JsonTokenId.ID_START_OBJECT));
+		assertThat("incorrect has token ID", jts.hasTokenId(0), is(false));
+		assertThat("incorrect has token ID", jts.hasTokenId(JsonTokenId.ID_START_OBJECT),
+				is(true));
+		assertThat("incorrect has token", jts.hasToken(null), is(false));
+		assertThat("incorrect has token", jts.hasToken(JsonToken.NOT_AVAILABLE), is(false));
+		assertThat("incorrect has token", jts.hasToken(JsonToken.START_OBJECT), is(true));
+		
+		jts.close();
 	}
 	
 	@Test
@@ -98,6 +130,279 @@ public class JsonTokenStreamTest {
 			assertThat("correct exception message", e.getLocalizedMessage(),
 					is("Buffer size must be at least 10"));
 		}
+	}
+	
+	// could probably reuse some of code somehow but screw it for now
+	
+	@Test
+	public void nextBooleanValue() throws Exception {
+		final Object data = ImmutableMap.of(
+				"foo", Arrays.asList(true, false),
+				"bar", Arrays.asList(1, 2));
+		final JsonTokenStream jts = new JsonTokenStream(
+				new ObjectMapper().writeValueAsString(data));
+		
+		// foo tree
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_OBJECT));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList()));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.FIELD_NAME));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect bool", jts.nextBooleanValue(), is(true));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo", "0")));
+		assertThat("incorrect bool", jts.nextBooleanValue(), is(false));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo", "1")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		
+		// bar tree
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.FIELD_NAME));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		assertThat("incorrect text", jts.nextBooleanValue(), nullValue());
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar", "0")));
+		assertThat("incorrect text", jts.nextBooleanValue(), nullValue());
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar", "1")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		
+		// close object
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_OBJECT));
+		assertThat("incorrect closed", jts.isClosed(), is(false));
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		assertThat("incorrect closed", jts.isClosed(), is(true));
+		
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		jts.close();
+	}
+	
+	@Test
+	public void nextFieldName() throws Exception {
+		final Object data = ImmutableMap.of(
+				"foo", "baz",
+				"bar", "bat");
+		final JsonTokenStream jts = new JsonTokenStream(
+				new ObjectMapper().writeValueAsString(data));
+		
+		// foo tree
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_OBJECT));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList()));
+		assertThat("incorrect name", jts.nextFieldName(), is("foo"));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect name", jts.nextFieldName(), nullValue());
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect name", jts.nextFieldName(), is("bar"));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		assertThat("incorrect name", jts.nextFieldName(), is(nullValue()));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		
+		// close object
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_OBJECT));
+		assertThat("incorrect closed", jts.isClosed(), is(false));
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		assertThat("incorrect closed", jts.isClosed(), is(true));
+		
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		jts.close();
+	}
+	
+	@Test
+	public void nextFieldNameString() throws Exception {
+		final Object data = ImmutableMap.of(
+				"foo", "baz",
+				"bar", "bat");
+		final JsonTokenStream jts = new JsonTokenStream(
+				new ObjectMapper().writeValueAsString(data));
+		
+		// foo tree
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_OBJECT));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList()));
+		assertThat("incorrect token", jts.nextFieldName(new SerializedString("foo")), is(true));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect token", jts.nextFieldName(new SerializedString("baz")), is(false));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		// 'bar' input returns true here
+		assertThat("incorrect token", jts.nextFieldName(new SerializedString("bal")), is(false));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		assertThat("incorrect token", jts.nextFieldName(new SerializedString("bat")), is(false));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		
+		// close object
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_OBJECT));
+		assertThat("incorrect closed", jts.isClosed(), is(false));
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		assertThat("incorrect closed", jts.isClosed(), is(true));
+		
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		jts.close();
+	}
+	
+	@Test
+	public void nextIntValue() throws Exception {
+		final Object data = ImmutableMap.of(
+				"foo", Arrays.asList(1, 2),
+				"bar", Arrays.asList(1.1, 2.2));
+		final JsonTokenStream jts = new JsonTokenStream(
+				new ObjectMapper().writeValueAsString(data));
+		
+		// foo tree
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_OBJECT));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList()));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.FIELD_NAME));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect text", jts.nextIntValue(-1), is(1));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo", "0")));
+		assertThat("incorrect text", jts.nextIntValue(-1), is(2));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo", "1")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		
+		// bar tree
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.FIELD_NAME));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		assertThat("incorrect text", jts.nextIntValue(-1), is(-1));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar", "0")));
+		assertThat("incorrect text", jts.nextIntValue(-1), is(-1));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar", "1")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		
+		// close object
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_OBJECT));
+		assertThat("incorrect closed", jts.isClosed(), is(false));
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		assertThat("incorrect closed", jts.isClosed(), is(true));
+		
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		jts.close();
+	}
+	
+	@Test
+	public void nextLongValue() throws Exception {
+		final Object data = ImmutableMap.of(
+				"foo", Arrays.asList(1L, 2L),
+				"bar", Arrays.asList(1.1, 2.2));
+		final JsonTokenStream jts = new JsonTokenStream(
+				new ObjectMapper().writeValueAsString(data));
+		
+		// foo tree
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_OBJECT));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList()));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.FIELD_NAME));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect text", jts.nextLongValue(-1), is(1L));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo", "0")));
+		assertThat("incorrect text", jts.nextLongValue(-1), is(2L));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo", "1")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		
+		// bar tree
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.FIELD_NAME));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		assertThat("incorrect text", jts.nextLongValue(-1), is(-1L));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar", "0")));
+		assertThat("incorrect text", jts.nextLongValue(-1), is(-1L));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar", "1")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		
+		// close object
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_OBJECT));
+		assertThat("incorrect closed", jts.isClosed(), is(false));
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		assertThat("incorrect closed", jts.isClosed(), is(true));
+		
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		jts.close();
+	}
+	
+	@Test
+	public void nextValue() throws Exception {
+		final Object data = ImmutableMap.of(
+				"foo", Arrays.asList(1L, 2L),
+				"bar", "baz");
+		final JsonTokenStream jts = new JsonTokenStream(
+				new ObjectMapper().writeValueAsString(data));
+		
+		// foo tree
+		assertThat("incorrect value", jts.nextValue(), is(JsonToken.START_OBJECT));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList()));
+		assertThat("incorrect value", jts.nextValue(), is(JsonToken.START_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect value", jts.nextValue(), is(JsonToken.VALUE_NUMBER_INT));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo", "0")));
+		assertThat("incorrect value", jts.nextValue(), is(JsonToken.VALUE_NUMBER_INT));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo", "1")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		
+		// bar tree
+		assertThat("incorrect token", jts.nextValue(), is(JsonToken.VALUE_STRING));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		
+		// close object
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_OBJECT));
+		assertThat("incorrect closed", jts.isClosed(), is(false));
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		assertThat("incorrect closed", jts.isClosed(), is(true));
+		
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		jts.close();
+	}
+	
+	@Test
+	public void nextTextValue() throws Exception {
+		final Object data = ImmutableMap.of(
+				"foo", Arrays.asList("one", "two"),
+				"bar", Arrays.asList(1, 2));
+		final JsonTokenStream jts = new JsonTokenStream(
+				new ObjectMapper().writeValueAsString(data));
+		
+		// foo tree
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_OBJECT));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList()));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.FIELD_NAME));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		assertThat("incorrect text", jts.nextTextValue(), is("one"));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo", "0")));
+		assertThat("incorrect text", jts.nextTextValue(), is("two"));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo", "1")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("foo")));
+		
+		// bar tree
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.FIELD_NAME));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.START_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		assertThat("incorrect text", jts.nextTextValue(), nullValue());
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar", "0")));
+		assertThat("incorrect text", jts.nextTextValue(), nullValue());
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar", "1")));
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_ARRAY));
+		assertThat("incorrect path", jts.getCurrentPath(), is(Arrays.asList("bar")));
+		
+		// close object
+		assertThat("incorrect token", jts.nextToken(), is(JsonToken.END_OBJECT));
+		assertThat("incorrect closed", jts.isClosed(), is(false));
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		assertThat("incorrect closed", jts.isClosed(), is(true));
+		
+		assertThat("incorrect token", jts.nextToken(), nullValue());
+		jts.close();
 	}
 	
 	@Test
