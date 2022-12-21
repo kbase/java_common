@@ -74,18 +74,25 @@ public class MongoController {
 		return tempDir;
 	}
 	
-	public void destroy(boolean deleteTempFiles) throws IOException {
+	public void destroy(boolean deleteTempFiles) throws IOException, InterruptedException {
 		if (mongo != null) {
 			mongo.destroy();
 		}
 		if (tempDir != null && deleteTempFiles) {
-			FileUtils.deleteDirectory(tempDir.toFile());
+			try {
+				FileUtils.deleteDirectory(tempDir.toFile());
+			} catch (IOException e) {
+				// probably mongo deleted a file after the function listed it, race condition
+				Thread.sleep(1000);
+				// if it fails again just fail hard
+				FileUtils.deleteDirectory(tempDir.toFile());
+			}
 		}
 	}
 
 	public static void main(String[] args) throws Exception {
 		MongoController ac = new MongoController(
-				"/kb/runtime/bin/mongod",
+				"/home/crushingismybusiness/mongo/3.6.12/bin/mongod",
 				Paths.get("workspacetesttemp"));
 		System.out.println(ac.getServerPort());
 		System.out.println(ac.getTempDir());
@@ -93,7 +100,7 @@ public class MongoController {
 		System.out.println("any char to shut down");
 		//get user input for a
 		reader.next();
-		ac.destroy(false);
+		ac.destroy(true);
 		reader.close();
 	}
 	

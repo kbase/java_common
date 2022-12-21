@@ -4,6 +4,12 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
+VERSION: 0.1.1 (Release 12/21/2)
+---------------------------------
+
+* MongoController will retry once if it encounters an IOError when deleting test files.
+
+
 VERSION: 0.1.0 (Release 11/12/19)
 ---------------------------------
 
