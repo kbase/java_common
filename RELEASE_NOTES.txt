@@ -4,11 +4,16 @@ OVERVIEW
 -----------------------------------------
 Repo for code shared between Java services.
 
-VERSION: 0.1.1 (Release 12/21/2)
+VERSION: 0.2.0 (Release 2/7/24)
+---------------------------------
+
+* MongoController now has a constructor suited for different MongoDB versions
+* The us.kbase.common.test.controllers.shock directory was removed
+
+VERSION: 0.1.1 (Release 12/21/22)
 ---------------------------------
 
 * MongoController will retry once if it encounters an IOError when deleting test files.
-
 
 VERSION: 0.1.0 (Release 11/12/19)
 ---------------------------------
