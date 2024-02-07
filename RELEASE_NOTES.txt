@@ -7,8 +7,8 @@ Repo for code shared between Java services.
 VERSION: 0.2.0 (Release 2/7/24)
 ---------------------------------
 
-* MongoController now has a constructor suited for different MongoDB versions
-* The us.kbase.common.test.controllers.shock directory was removed
+* MongoController is now compatible with Mongo versions 2 through 7.
+* The ShockController was removed.
 
 VERSION: 0.1.1 (Release 12/21/22)
 ---------------------------------
