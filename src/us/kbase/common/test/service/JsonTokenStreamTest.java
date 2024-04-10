@@ -559,7 +559,6 @@ public class JsonTokenStreamTest {
 	public void detectEncoding() throws Exception {
 		for (String data: basicJsonData) {
 			for (Charset enc: encodings) {
-				@SuppressWarnings("resource")
 				JsonTokenStream jts = new JsonTokenStream(data.getBytes(enc));
 				assertThat("encoding correctly detected", jts.getEncoding(),
 						is(enc));
