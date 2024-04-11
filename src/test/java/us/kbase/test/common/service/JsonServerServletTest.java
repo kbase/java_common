@@ -40,7 +40,7 @@ import us.kbase.common.service.JsonServerServlet;
 import us.kbase.common.service.JsonServerServlet.AuthenticationHandler;
 import us.kbase.common.service.JsonServerSyslog;
 import us.kbase.common.service.RpcContext;
-import us.kbase.test.common.TestCommon;
+import us.kbase.testutils.TestCommon;
 
 public class JsonServerServletTest {
 	
