@@ -34,22 +34,9 @@ jobs:
           distribution: 'temurin'
           java-version: ${{matrix.java}}
 
-      - name: Install dependencies and set up test config
-        shell: bash
-        run: |
-          export HOMEDIR=`pwd`
-
-          # move to parent dir of homedir to install binaries etc
-          cd ..
-          
-          # set up jars
-          git clone https://github.com/kbase/jars
-
-          cd $HOMEDIR
-
       - name: Run tests
         run: |
-           make test-coverage
+           ./gradlew test
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
