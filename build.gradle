@@ -10,7 +10,6 @@ plugins {
 
 group = 'com.github.kbase'
 
-// TODO GRADLE move files to standard gradle layout
 // TODO GRADLE update docs
 // TODO GRADLE update to jitpack built auth jar (javadoc as well)
 // TODO GRADLE publish w/ jitpack when auth jar pulled from jitpack
@@ -59,23 +58,6 @@ publishing {
 	publications {
 		maven(MavenPublication) {
 		from components.java
-		}
-	}
-}
-
-sourceSets {
-	main {
-		java {
-			srcDirs = ["src"]
-			exclude '**/test/**'
-			exclude '**/testlogger/**'
-		}
-	}
-	test {
-		java {
-			srcDirs = ["src"]
-			include '**/test/**'
-			include '**/testlogger/**'
 		}
 	}
 }
