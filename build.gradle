@@ -10,13 +10,21 @@ plugins {
 
 group = 'com.github.kbase'
 
-// TODO GRADLE update docs
-// TODO GRADLE update to jitpack built auth jar (javadoc as well)
-// TODO GRADLE publish w/ jitpack when auth jar pulled from jitpack
+var VER_AUTH2_CLIENT = "0.5.0"
+var VER_JACKSON = "2.9.9"
+
 // TODO BUILD get rid of dependency on Syslog4j, 10yo abandonware w/ CVEs
 
 repositories {
 	mavenCentral()
+	maven {
+		name = "Clojars"
+		url = "https://repo.clojars.org/"
+	}
+	maven {
+		name = "JitPack" 
+		url = 'https://jitpack.io'
+	}
 }
 
 compileJava {
@@ -51,6 +59,9 @@ javadoc {
 	options {
 		// I don't know why this isn't working, but it's not worth spending time on right now
 		links "https://docs.oracle.com/javase/8/docs/api/"
+		links "https://www.javadoc.io/doc/com.fasterxml.jackson.core/jackson-core/$VER_JACKSON/"
+		links "https://www.javadoc.io/doc/com.fasterxml.jackson.core/jackson-databind/$VER_JACKSON/"
+		links "https://javadoc.jitpack.io/com/github/kbase/auth2_client_java/$VER_AUTH2_CLIENT/javadoc/"
 	}
 }
 
@@ -62,29 +73,13 @@ publishing {
 	}
 }
 
-def fromURL = { url, name ->
-	File file = new File("$buildDir/download/${name}.jar")
-	file.parentFile.mkdirs()
-	if (!file.exists()) {
-		new URL(url).withInputStream { downloadStream ->
-			file.withOutputStream { fileOut ->
-				fileOut << downloadStream
-			}
-		}
-	}
-	files(file.absolutePath)
-}
-
 dependencies {
 
 	// using older dependencies to not force upgrades on services that might not be able to
 	// handle them. Need to upgrade the services and then upgrade here
-	implementation 'com.fasterxml.jackson.core:jackson-annotations:2.9.9'
-	implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.9'
-	implementation fromURL(
-		'https://github.com/kbase/jars/raw/master/lib/jars/kbase/auth/kbase-auth-0.4.2.jar',
-		'kbase-auth-0.4.4'
-	)
+	implementation "com.fasterxml.jackson.core:jackson-annotations:$VER_JACKSON"
+	implementation "com.fasterxml.jackson.core:jackson-databind:$VER_JACKSON"
+	implementation "com.github.kbase:auth2_client_java:$VER_AUTH2_CLIENT"
 	implementation 'org.apache.commons:commons-lang3:3.1'
 	implementation 'org.slf4j:slf4j-api:1.7.7'
 	implementation 'ch.qos.logback:logback-classic:1.1.2'
@@ -96,10 +91,7 @@ dependencies {
 	implementation 'org.eclipse.jetty.aggregate:jetty-all:7.0.0.v20091005'
 	// TODO DEPS Need to rework the java common logger to not use syslog4j at all since it's
 	// abandonware and has a ton of CVEs, even in the newer versions.
-	implementation fromURL(
-		'https://github.com/kbase/jars/raw/master/lib/jars/syslog4j/syslog4j-0.9.46.jar',
-		'syslog4j-0.9.46'
-	)
+	implementation "org.syslog4j:syslog4j:0.9.46"
 	// needed for syslog4j
 	implementation 'net.java.dev.jna:jna:3.4.0'
 
@@ -108,5 +100,5 @@ dependencies {
 	testImplementation 'org.mockito:mockito-core:3.0.0'
 	testImplementation 'com.github.zafarkhaja:java-semver:0.9.0'
 	testImplementation 'commons-io:commons-io:2.4'
-	
+	testImplementation 'com.github.kbase:java_test_utilities:0.1.0'
 }

@@ -1,6 +1,46 @@
-# Java code common to many KBase applications
+# Java Common
+
+Contains Java code common to many KBase applications
 
 In particular, this repo includes KB-SDK code that is shared between servers and apps.
+
+## Including the client in your build
+
+See https://jitpack.io/#kbase/java_common/ for instructions on how to include JitPack built
+dependencies in your build.
+
+## JavaDoc
+
+JavaDoc is available at
+```
+https://javadoc.jitpack.io/com/github/kbase/java_common/<version>/javadoc/
+```
+
+For example:
+
+https://javadoc.jitpack.io/com/github/kbase/java_common/0.3.0/javadoc/
+
+### Adding and releasing code
+
+* Adding code
+  * All code additions and updates must be made as pull requests directed at the develop branch.
+    * All tests must pass and all new code must be covered by tests.
+    * All new code must be documented appropriately
+      * Javadoc
+      * General documentation if appropriate
+      * Release notes
+* Releases
+  * The main branch is the stable branch. Releases are made from the develop branch to the main
+    branch.
+  * Tag the version in git and github.
+  * Create a github release.
+  * Check that the javadoc is appropriately built on JitPack.
+
+### Testing
+
+```
+./gradlew test
+```
 
 ## Known issues:
 
