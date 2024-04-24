@@ -4,13 +4,13 @@
 
 Repo for code shared between Java services.
 
-## VERSION: 0.3.0 (Release TBD)
+## VERSION: 0.3.0 (Release 4/24/24)
 
 * The GetMongoDB class has been removed.
 * Classes in the `us.kbase.common.test` package have been moved to `us.kbase.test.common`
   for consistency with other repos.
 * 3 test helper classes in `us.kbase.commmon.test` as well as the `MongoController` and
-  `ControllerCommon have been moved to the `java_test_utilities` repo.
+  `ControllerCommon` have been moved to the `java_test_utilities` repo.
 * The build system was switched from Make / Ant to Gradle.
 
 ## VERSION: 0.2.0 (Release 2/7/24)
