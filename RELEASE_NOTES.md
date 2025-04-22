@@ -4,6 +4,11 @@
 
 Repo for code shared between Java services.
 
+## VERSION: 0.3.1 (Release 4/21/25)
+
+* Restored the JobState class, which was removed in version 0.1.0 is 2019. It was no longer
+  used in this repo, but is still used in `kb_sdk` async Java clients.
+
 ## VERSION: 0.3.0 (Release 4/24/24)
 
 * The GetMongoDB class has been removed.
@@ -24,8 +29,8 @@ Repo for code shared between Java services.
 
 ## VERSION: 0.1.0 (Release 11/12/19)
 
-* JsonServerServlet method dispatch to the Narrative Job Service (via *_async and *_check) methods
-  has been removed.
+* JsonServerServlet method dispatch to the Narrative Job Service (via `*_async` and `*_check`)
+  methods has been removed.
   * This includes removing the us.kbase.common.service.JobState class.
 * JsonServerServlet automatic provenance generation has been removed.
 * Java required version is now 1.8.
