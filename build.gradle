@@ -82,7 +82,7 @@ dependencies {
 	implementation "com.github.kbase:auth2_client_java:$VER_AUTH2_CLIENT"
 	implementation 'org.apache.commons:commons-lang3:3.1'
 	implementation 'org.slf4j:slf4j-api:1.7.7'
-	implementation 'ch.qos.logback:logback-classic:1.1.2'
+	implementation 'ch.qos.logback:logback-classic:1.5.18'
 	implementation 'org.ini4j:ini4j:0.5.2'
 	implementation 'javax.servlet:servlet-api:2.5'
 	implementation 'joda-time:joda-time:2.2'
