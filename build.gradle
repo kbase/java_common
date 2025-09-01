@@ -88,7 +88,7 @@ dependencies {
 	implementation 'joda-time:joda-time:2.2'
 	// TODO CODE ideally we could rewrite java-common so it didn't have a runtime dependency on
 	//           jetty
-	implementation 'org.eclipse.jetty.aggregate:jetty-all:7.0.0.v20091005'
+	implementation 'org.eclipse.jetty.aggregate:jetty-all:9.4.58.v20250814'
 	// TODO DEPS Need to rework the java common logger to not use syslog4j at all since it's
 	// abandonware and has a ton of CVEs, even in the newer versions.
 	implementation "org.syslog4j:syslog4j:0.9.46"
