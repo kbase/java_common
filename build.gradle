@@ -93,7 +93,7 @@ dependencies {
 	// abandonware and has a ton of CVEs, even in the newer versions.
 	implementation "org.syslog4j:syslog4j:0.9.46"
 	// needed for syslog4j
-	implementation 'net.java.dev.jna:jna:3.4.0'
+	implementation 'net.java.dev.jna:jna:5.18.1'
 
 	testImplementation 'junit:junit:4.9'
 	testImplementation 'com.google.guava:guava:18.0'
