@@ -80,7 +80,7 @@ dependencies {
 	implementation "com.fasterxml.jackson.core:jackson-annotations:$VER_JACKSON"
 	implementation "com.fasterxml.jackson.core:jackson-databind:$VER_JACKSON"
 	implementation "com.github.kbase:auth2_client_java:$VER_AUTH2_CLIENT"
-	implementation 'org.apache.commons:commons-lang3:3.1'
+	implementation 'org.apache.commons:commons-lang3:3.20.0'
 	implementation 'org.slf4j:slf4j-api:1.7.7'
 	implementation 'ch.qos.logback:logback-classic:1.1.2'
 	implementation 'org.ini4j:ini4j:0.5.2'
